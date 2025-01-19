@@ -7,6 +7,8 @@
 #include <format>
 #include <fstream>
 
+#include "jcdp/operation.hpp"
+
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 namespace jcdp {
@@ -29,18 +31,20 @@ struct Jacobian {
    //! Number of non-zero elements (general sparsity).
    std::size_t non_zero_elements{0};
 
-   //! Cost of a single tangent evaluation (y^(1) = F' * x^(1)).
-   std::size_t tangent_fma{0};
-   //! Cost of a single adjoint evaluation (x_(1) = y_(1) * F').
-   std::size_t adjoint_fma{0};
-   //! Memory requirement for a single adjoint evaluation (~ size of tape).
-   std::size_t adjoint_persistent_memory{0};
+   //! Amount of edges in the DAG of the primal function (~ size of tape).
+   std::size_t edges_in_dag{0};
+   //! Runtime factor of a single tangent evaluation (y^(1) = F' * x^(1)).
+   double tangent_factor{1};
+   //! Runtime factor of a single adjoint evaluation (x_(1) = y_(1) * F').
+   double adjoint_factor{1};
 
    //! Generate a random Jacobian matrix.
    template<class Generator, class IntDistribution, class RealDistribution>
    inline static auto generate_random(
         Generator& gen, IntDistribution& size_distribution,
-        IntDistribution& cost_distribution, RealDistribution& mem_distribution,
+        IntDistribution& dag_size_distribution,
+        RealDistribution& tangent_factor_distribution,
+        RealDistribution& adjoint_factor_distribution,
         RealDistribution& density_distribution,
         const std::optional<std::size_t> n = {}) -> Jacobian;
 
@@ -56,10 +60,21 @@ struct Jacobian {
       file << std::format(
            "    <edge id=\"{}\" source=\"{}\" target=\"{}\">\n", i, i, j);
       file << std::format(
-           "      <data key=\"adjoint_cost\">{}</data>\n", adjoint_fma);
+           "      <data key=\"adjoint_cost\">{}</data>\n",
+           single_evaluation_fma<Mode::ADJOINT>());
       file << std::format(
-           "      <data key=\"tangent_cost\">{}</data>\n", tangent_fma);
+           "      <data key=\"tangent_cost\">{}</data>\n",
+           single_evaluation_fma<Mode::TANGENT>());
       file << "    </edge>\n";
+   }
+
+   template<Mode mode>
+   inline auto single_evaluation_fma() const -> std::size_t {
+      if constexpr (mode == Mode::ADJOINT) {
+         return static_cast<std::size_t>(edges_in_dag * adjoint_factor);
+      } else {
+         return static_cast<std::size_t>(edges_in_dag * tangent_factor);
+      }
    }
 
  private:

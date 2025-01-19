@@ -79,25 +79,48 @@ class BasicPropertyInfo {
  * @tparam T Type of the stored value.
  ******************************************************************************/
 template<typename T>
-class PropertyInfo : public BasicPropertyInfo {
+class PropertyInfoBase : public BasicPropertyInfo {
  public:
    //! The type of the value stored in here.
    using type = T;
+
+   //! Constructor, delegating most of its work to that of
+   //! BasicPropertyInfo, just initializing the pointer.
+   PropertyInfoBase(
+        T* p, const std::string& k, const std::string& d,
+        void (*onr)(Properties*));
+
+ protected:
+   T* m_ptr;
+};
+
+/******************************************************************************
+ * @brief Stores a property and its value.
+ *
+ * @tparam T Type of the stored value.
+ ******************************************************************************/
+template<typename T>
+class PropertyInfo : public PropertyInfoBase<T> {
+ public:
+   using PropertyInfoBase<T>::PropertyInfoBase;
 
    //! Implements pipe function by deferencing stored pointer _ptr.
    virtual auto from_pipe(std::istream& i) -> void override final;
 
    //! Return the value as a string.
    virtual auto to_string() const -> const std::string override final;
+};
 
-   //! Constructor, delegating most of its work to that of
-   //! BasicPropertyInfo, just initializing the pointer.
-   PropertyInfo(
-        T* p, const std::string& k, const std::string& d,
-        void (*onr)(Properties*));
+template<typename T1, typename T2>
+class PropertyInfo<std::pair<T1, T2>> : public PropertyInfoBase<std::pair<T1, T2>> {
+ public:
+   using PropertyInfoBase<std::pair<T1, T2>>::PropertyInfoBase;
 
- private:
-   T* m_ptr;
+   //! Implements pipe function by deferencing stored pointer _ptr.
+   virtual auto from_pipe(std::istream& i) -> void override final;
+
+   //! Return the value as a string.
+   virtual auto to_string() const -> const std::string override final;
 };
 
 /******************************************************************************
@@ -131,12 +154,8 @@ class Properties {
    //! by entries of _info.
    ~Properties();
 
-   //! Finds the propertiy which is registered under key and pipes value
-   //! into it. Also executes the associated _on_read.
-   auto put(const std::string& key, std::ifstream& in) -> void;
-
    //! Parses a config file from a std::ifstream.
-   auto parse_config(std::ifstream&& in) -> void;
+   auto parse_config(std::ifstream&& in, bool skip_not_registered_keys = false) -> void;
 
    //! Prints the keys and descriptions of all registeres properties in a
    //! structured way.
@@ -145,6 +164,10 @@ class Properties {
    auto print_values(std::ostream& o) -> void;
 
  private:
+   //! Finds the propertiy which is registered under key and pipes value
+   //! into it. Also executes the associated _on_read.
+   auto put(const std::string& key, std::ifstream& in, bool skip_not_registered_keys) -> void;
+
    //! Contains pointers to all registered properties.
    std::list<BasicPropertyInfo*> m_info;
 

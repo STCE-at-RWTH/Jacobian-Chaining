@@ -3,6 +3,7 @@
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
+#include <cassert>
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
@@ -10,6 +11,7 @@
 #include <vector>
 
 #include "jcdp/jacobian.hpp"
+#include "jcdp/operation.hpp"
 #include "jcdp/util/properties.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
@@ -18,11 +20,16 @@ namespace jcdp {
 
 class JacobianChainProperties : public Properties {
  public:
-   size_t chain_length = 1;
-   std::pair<size_t, size_t> size_range = {1, 1};
-   std::pair<size_t, size_t> cost_range = {1, 1};
-   std::pair<double, double> memory_factor_range = {0.0, 2.0};
-   std::pair<double, double> density_range = {0.0, 1.0};
+   size_t chain_length{1};
+   std::pair<size_t, size_t> size_range{1, 1};
+   std::pair<size_t, size_t> dag_size_range{1, 1};
+   std::pair<double, double> tangent_factor_range{1.0, 1.0};
+   std::pair<double, double> adjoint_factor_range{1.0, 1.0};
+   std::pair<double, double> density_range{0.0, 1.0};
+   size_t seed{[]() -> size_t {
+      std::random_device rd;
+      return rd();
+   }()};
 
    JacobianChainProperties() {
       register_property(
@@ -30,48 +37,83 @@ class JacobianChainProperties : public Properties {
       register_property(
            size_range, "size_range", "Range of the Jacobian dimensions.");
       register_property(
-           cost_range, "cost_range",
-           "Range of the tangent and adjoint evaluation costs.");
+           dag_size_range, "dag_size_range",
+           "Range of the amount of edges in the DAG of a single function F.");
       register_property(
-           memory_factor_range, "memory_range",
-           "Range of the persistent memory factors (is multiplied by the "
-           "adjoint fma).");
+           tangent_factor_range, "tangent_factor_range",
+           "Range of the tangent runtime factor.");
+      register_property(
+           adjoint_factor_range, "adjoint_factor_range",
+           "Range of the adjoint runtime factor.");
       register_property(
            density_range, "density_range",
            "Range of density percentages of the Jacobians. Used to calcluate "
            "number of non-zero entries and bandwidth.");
+      register_property(seed, "seed", "Seed for the RNG.");
    }
 };
 
 struct JacobianChain {
    std::vector<Jacobian> jacobians;
 
+   template<Mode mode>
+   inline auto subchain_fma(const std::size_t j, const std::size_t i) const
+        -> std::size_t {
+      assert(j < jacobians.size() && i < jacobians.size() && j >= i);
+
+      std::size_t single_eval_fma = 0;
+      for (std::size_t idx = i; idx <= j; ++idx) {
+         single_eval_fma += jacobians[idx].single_evaluation_fma<mode>();
+      }
+
+      if constexpr (mode == Mode::ADJOINT) {
+         return jacobians[j].m * single_eval_fma;
+      } else {
+         return jacobians[i].n * single_eval_fma;
+      }
+   }
+
+   inline auto subchain_memory_requirement(
+        const std::size_t j, const std::size_t i) const -> std::size_t {
+      assert(j < jacobians.size() && i < jacobians.size() && j >= i);
+
+      std::size_t mem_req = 0;
+      for (std::size_t idx = i; idx <= j; ++idx) {
+         mem_req += jacobians[idx].edges_in_dag;
+      }
+
+      return mem_req;
+   }
+
    //! Generate a random Jacobian matrix.
    inline static auto generate_random(const JacobianChainProperties& p)
         -> JacobianChain {
 
-      std::random_device rd;
-      std::mt19937 gen(rd());
+      std::mt19937 gen(p.seed);
       std::uniform_int_distribution<std::size_t> size_distribution(
            p.size_range.first, p.size_range.second);
-      std::uniform_int_distribution<std::size_t> cost_distribution(
-           p.cost_range.first, p.cost_range.second);
-      std::uniform_real_distribution<double> mem_distribution(
-           p.memory_factor_range.first, p.memory_factor_range.second);
+      std::uniform_int_distribution<std::size_t> dag_size_distribution(
+           p.dag_size_range.first, p.dag_size_range.second);
+      std::uniform_real_distribution<double> tangent_factor_distribution(
+           p.tangent_factor_range.first, p.tangent_factor_range.second);
+      std::uniform_real_distribution<double> adjoint_factor_distribution(
+           p.adjoint_factor_range.first, p.adjoint_factor_range.second);
       std::uniform_real_distribution<double> density_distribution(
            p.density_range.first, p.density_range.second);
 
       JacobianChain chain;
       chain.jacobians.reserve(p.chain_length);
       chain.jacobians.push_back(Jacobian::generate_random(
-           gen, size_distribution, cost_distribution, mem_distribution,
+           gen, size_distribution, dag_size_distribution,
+           tangent_factor_distribution, adjoint_factor_distribution,
            density_distribution));
       chain.jacobians[0].i = 0;
       chain.jacobians[0].j = 1;
 
       for (std::size_t i = 1; i < p.chain_length; ++i) {
          chain.jacobians.push_back(Jacobian::generate_random(
-              gen, size_distribution, cost_distribution, mem_distribution,
+              gen, size_distribution, dag_size_distribution,
+              tangent_factor_distribution, adjoint_factor_distribution,
               density_distribution, chain.jacobians[i - 1].m));
          chain.jacobians[i].i = i;
          chain.jacobians[i].j = i + 1;

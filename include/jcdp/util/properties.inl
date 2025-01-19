@@ -93,37 +93,26 @@ inline auto BasicPropertyInfo::desc() const -> const std::string& {
  ******************************************************************************/
 template<typename T>
 inline auto PropertyInfo<T>::from_pipe(std::istream& i) -> void {
-   i >> *m_ptr;
+   i >> *(this->m_ptr);
 }
 
-template<>
-inline auto PropertyInfo<std::pair<double, double>>::from_pipe(std::istream& i)
+template<typename T1, typename T2>
+inline auto PropertyInfo<std::pair<T1, T2>>::from_pipe(std::istream& i)
      -> void {
-   i >> m_ptr->first >> m_ptr->second;
-}
-
-template<>
-inline auto PropertyInfo<std::pair<std::size_t, std::size_t>>::from_pipe(
-     std::istream& i) -> void {
-   i >> m_ptr->first >> m_ptr->second;
+   i >> this->m_ptr->first >> this->m_ptr->second;
 }
 
 //! Return the value as a string.
 template<typename T>
 inline auto PropertyInfo<T>::to_string() const -> const std::string {
-   return std::to_string(*m_ptr);
+   return std::to_string(*(this->m_ptr));
 }
 
-template<>
-inline auto PropertyInfo<std::pair<double, double>>::to_string() const
+template<typename T1, typename T2>
+inline auto PropertyInfo<std::pair<T1, T2>>::to_string() const
      -> const std::string {
-   return std::to_string(m_ptr->first) + " " + std::to_string(m_ptr->second);
-}
-
-template<>
-inline auto PropertyInfo<std::pair<std::size_t, std::size_t>>::to_string() const
-     -> const std::string {
-   return std::to_string(m_ptr->first) + " " + std::to_string(m_ptr->second);
+   return std::to_string(this->m_ptr->first) + " " +
+          std::to_string(this->m_ptr->second);
 }
 
 /******************************************************************************
@@ -137,7 +126,7 @@ inline auto PropertyInfo<std::pair<std::size_t, std::size_t>>::to_string() const
  *                this property.
  ******************************************************************************/
 template<typename T>
-inline PropertyInfo<T>::PropertyInfo(
+inline PropertyInfoBase<T>::PropertyInfoBase(
      T* p, const std::string& k, const std::string& d, void (*onr)(Properties*))
    : BasicPropertyInfo(k, d, onr), m_ptr(p) {}
 
@@ -177,8 +166,11 @@ inline Properties::~Properties() {
  *
  * @param[in] key The key into which to put the value.
  * @param[in] value The value to write\. Will be converted from string.
+ * @param[in] skip_not_registered_keys Ignore when we encounter an unknown key.
  ******************************************************************************/
-inline auto Properties::put(const std::string& key, std::ifstream& in) -> void {
+inline auto Properties::put(
+     const std::string& key, std::ifstream& in,
+     const bool skip_not_registered_keys) -> void {
 
    for (auto& pi : m_info) {
       if (key == pi->key()) {
@@ -187,7 +179,9 @@ inline auto Properties::put(const std::string& key, std::ifstream& in) -> void {
          return;
       }
    }
-   throw KeyNotRegisteredError(key);
+   if (!skip_not_registered_keys) {
+      throw KeyNotRegisteredError(key);
+   }
 }
 
 /******************************************************************************
@@ -196,15 +190,17 @@ inline auto Properties::put(const std::string& key, std::ifstream& in) -> void {
  * First checks if the file may be empty or invalid.
  *
  * @param[in] in std::ifstream from which to read the properties.
+ * @param[in] skip_not_registered_keys Ignore when we encounter an unknown key.
  ******************************************************************************/
-inline auto Properties::parse_config(std::ifstream&& in) -> void {
+inline auto Properties::parse_config(
+     std::ifstream&& in, const bool skip_not_registered_keys) -> void {
    if (in.eof() || in.fail() || !in.good()) {
       throw BadConfigFileError();
    }
 
    std::string key;
    while (in >> key) {
-      put(key, in);
+      put(key, in, skip_not_registered_keys);
    }
 }
 

@@ -24,7 +24,9 @@ namespace jcdp {
 template<class Generator, class IntDistribution, class RealDistribution>
 inline auto Jacobian::generate_random(
      Generator& gen, IntDistribution& size_distribution,
-     IntDistribution& cost_distribution, RealDistribution& mem_distribution,
+     IntDistribution& dag_size_distribution,
+     RealDistribution& tangent_factor_distribution,
+     RealDistribution& adjoint_factor_distribution,
      RealDistribution& density_distribution, const std::optional<std::size_t> n)
      -> Jacobian {
 
@@ -42,10 +44,9 @@ inline auto Jacobian::generate_random(
    jac.non_zero_elements += std::round(
         (max_mn - jac.m * jac.n) * density_distribution(gen));
 
-   jac.tangent_fma = cost_distribution(gen);
-   jac.adjoint_fma = cost_distribution(gen);
-   jac.adjoint_persistent_memory = static_cast<std::size_t>(
-        jac.adjoint_fma * mem_distribution(gen));
+   jac.edges_in_dag = dag_size_distribution(gen);
+   jac.tangent_factor = tangent_factor_distribution(gen);
+   jac.adjoint_factor = adjoint_factor_distribution(gen);
 
    return jac;
 }

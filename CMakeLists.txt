@@ -71,7 +71,7 @@ option(JCDP_USE_OPENMP
 #   "Whether to build the Doxygen documentation." OFF)
 
 # **************************************************************************** #
-# Include some NAG modules (intrinsics, PIC, sanitation, etc.)
+# Include some modules (intrinsics, PIC, sanitation, etc.)
 # **************************************************************************** #
 include(build_types)
 include(cxx_standard_library)
@@ -98,7 +98,7 @@ include(enable_sanitation)
 # endif()
 
 # **************************************************************************** #
-# Include some NAG modules (compiler flags, coverage, iwyu) and JCDP modules
+# Include some modules (compiler flags, coverage, iwyu) and JCDP modules
 # **************************************************************************** #
 include(compiler_flags)
 include(include_what_you_use)
