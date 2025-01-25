@@ -191,7 +191,8 @@ class DPSolver : public Properties {
    auto try_accumulation(const std::size_t j) -> void {
       if constexpr (mode == Mode::ADJOINT) {
          if (m_available_memory > 0) {
-            if (m_chain->subchain_memory_requirement(j, j) > m_available_memory) {
+            const std::size_t mem = m_chain->subchain_memory_requirement(j, j);
+            if (mem > m_available_memory) {
                return;
             }
          }
@@ -275,7 +276,8 @@ class DPSolver : public Properties {
       std::size_t op_cost;
       if constexpr (mode == Mode::ADJOINT) {
          if (m_available_memory > 0) {
-            if (m_chain->subchain_memory_requirement(k, i) > m_available_memory) {
+            const std::size_t mem = m_chain->subchain_memory_requirement(k, i);
+            if (mem > m_available_memory) {
                return;
             }
          }
