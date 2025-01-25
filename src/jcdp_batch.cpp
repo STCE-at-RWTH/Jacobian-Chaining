@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
       solver.init(chain);
 
       // auto start = std::chrono::high_resolution_clock::now();
-      std::size_t optimized_cost = solver.solve();
+      solver.solve();
       // auto end = std::chrono::high_resolution_clock::now();
       // std::chrono::duration<double> duration = end - start;
       // std::println("Solve duration: {} seconds", duration.count());

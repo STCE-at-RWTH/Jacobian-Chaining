@@ -91,7 +91,7 @@ struct JacobianChain {
    inline static auto generate_random(const JacobianChainProperties& p)
         -> JacobianChain {
 
-      std::mt19937 gen(p.seed);
+      std::mt19937_64 gen(p.seed);
       std::uniform_int_distribution<std::size_t> size_distribution(
            p.size_range.first, p.size_range.second);
       std::uniform_int_distribution<std::size_t> dag_size_distribution(
