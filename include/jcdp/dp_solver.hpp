@@ -4,16 +4,10 @@
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 #include <cstddef>
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
 #include <limits>
-#include <optional>
 #include <print>
-#include <random>
 #include <vector>
 
-#include "jcdp/jacobian.hpp"
 #include "jcdp/jacobian_chain.hpp"
 #include "jcdp/operation.hpp"
 #include "jcdp/util/properties.hpp"
@@ -23,12 +17,13 @@
 namespace jcdp {
 
 struct DPNode {
-   std::size_t cost{std::numeric_limits<std::size_t>::max()};
-   std::size_t position_split{0};
-   std::size_t thread_split{0};
-   Operation op{Operation::NONE};
-   Mode mode{Mode::NONE};
-   bool visited{false};
+   Operation op {Operation::NONE};
+   Mode mode {Mode::NONE};
+   std::size_t op_cost {std::numeric_limits<std::size_t>::max()};
+   std::size_t cost {std::numeric_limits<std::size_t>::max()};
+   std::size_t position_split {0};
+   std::size_t thread_split {0};
+   bool visited {false};
 };
 
 class DPSolver : public Properties {
@@ -52,30 +47,39 @@ class DPSolver : public Properties {
            "jacobian chain.");
    }
 
-   auto init(JacobianChain&& chain) -> void {
-      m_chain = chain;
+   auto init(JacobianChain& chain) -> void {
+      m_chain = &chain;
       m_length = chain.jacobians.size();
 
-      std::size_t dp_nodes = m_length * m_length;
+      std::size_t dp_nodes = m_length * (m_length + 1) / 2;
       if (m_available_threads >= m_length || m_available_threads < 1) {
          m_available_threads = 0;
       } else {
          dp_nodes *= m_available_threads;
+
+         // Correct for preaccumulation nodes which only ever use one thread
+         dp_nodes -= (m_available_threads - 1) * m_length;
       }
 
+      m_dptable.clear();
       m_dptable.resize(dp_nodes);
    }
 
-   auto solve() -> void {
+   auto solve() -> std::size_t {
+      // Accumulation costs
+      #pragma omp parallel for
+      for (std::size_t j = 0; j < m_length; ++j) {
+         try_accumulation<Mode::TANGENT>(j);
+         try_accumulation<Mode::ADJOINT>(j);
+      }
 
+      // Iterate over amount of available threads. m_available_threads can be 0
+      // which means unlimited threads, therefore using do-while loop here.
       std::size_t threads = 1;
       do {
-         for (std::size_t j = 0; j < m_length; ++j) {
-            try_accumulation<Mode::TANGENT>(j, threads);
-            try_accumulation<Mode::ADJOINT>(j, threads);
-         }
-
          for (std::size_t len = 2; len <= m_length; ++len) {
+            // Chains with same lengths and threads are independent!
+            #pragma omp parallel for
             for (std::size_t j = len - 1; j < m_length; ++j) {
                const std::size_t i = j - (len - 1);
 
@@ -90,10 +94,16 @@ class DPSolver : public Properties {
             }
          }
       } while (++threads <= m_available_threads);
+
+      m_chain->optimized_cost = node(m_length - 1, 0, m_available_threads).cost;
+      return m_chain->optimized_cost;
    }
 
    auto print_sequence() -> void {
-      print_operations(m_length - 1, 0, {0, m_available_threads - 1});
+      const std::size_t threads =
+           ((m_available_threads == 0) ? m_length : m_available_threads);
+
+      print_operations(m_length - 1, 0, {0, threads - 1});
    }
 
    auto print_operations(
@@ -146,45 +156,52 @@ class DPSolver : public Properties {
          std::print("\t[{}-{}]", thread_pool.first, thread_pool.second);
       }
 
-      std::println("\t{}", fma_ji.cost);
+      std::println("\t{}", fma_ji.op_cost);
    }
 
  private:
-   std::size_t m_length{0};
-   bool m_matrix_free{false};
-   bool m_banded{false};
-   bool m_sparse{false};
-   std::size_t m_available_memory{0};
-   std::size_t m_available_threads{0};
-   JacobianChain m_chain;
+   std::size_t m_length {0};
+   bool m_matrix_free {false};
+   bool m_banded {false};
+   bool m_sparse {false};
+   std::size_t m_available_memory {0};
+   std::size_t m_available_threads {0};
+   JacobianChain* m_chain {nullptr};
 
    std::vector<DPNode> m_dptable;
 
    auto node(const std::size_t j, const std::size_t i, const std::size_t t)
         -> DPNode& {
-      std::size_t idx = j * m_length + i;
-      if (m_available_threads > 0) {
-         idx += (t - 1) * m_length * m_length;
+
+      std::size_t idx = j * (j + 1) / 2 + i;
+      if (m_available_threads > 0 && j != i) {
+         idx += (t - 1) * (m_length + 1) * (m_length) / 2;
+
+         // Correct for preaccumulation nodes which only ever use one thread
+         if (t >= 2) {
+            idx -= (t - 2) * m_length + j;
+         }
       }
       return m_dptable[idx];
    }
 
    template<Mode mode>
-   auto try_accumulation(const std::size_t j, const std::size_t t) -> void {
+   auto try_accumulation(const std::size_t j) -> void {
       if constexpr (mode == Mode::ADJOINT) {
-         if (m_chain.subchain_memory_requirement(j, j) > m_available_memory) {
+         if (m_chain->subchain_memory_requirement(j, j) > m_available_memory) {
             return;
          }
       }
 
-      std::size_t cost = m_chain.subchain_fma<mode>(j, j);
-      DPNode& fma_ji = node(j, j, t);
+      std::size_t cost = m_chain->subchain_fma<mode>(j, j, j);
+      DPNode& fma_ji = node(j, j, 1);
       if (cost < fma_ji.cost) {
          fma_ji.op = Operation::ACCUMULATION;
+         fma_ji.mode = mode;
+         fma_ji.op_cost = cost;
+         fma_ji.cost = cost;
          fma_ji.position_split = j;
          fma_ji.thread_split = 0;
-         fma_ji.mode = mode;
-         fma_ji.cost = cost;
          fma_ji.visited = true;
       }
    }
@@ -196,13 +213,17 @@ class DPSolver : public Properties {
       std::size_t cost = std::numeric_limits<std::size_t>::max();
       std::size_t thread_split = 0;
 
-      if (t == 1 && m_available_threads > 0) {
+      if (t == 1) {
          const DPNode& fma_jk = node(j, k + 1, t);
          const DPNode& fma_ki = node(k, i, t);
          assert(fma_jk.visited);
          assert(fma_ki.visited);
 
-         cost = fma_jk.cost + fma_ki.cost;
+         if (m_available_threads > 0) {
+            cost = fma_jk.cost + fma_ki.cost;
+         } else {
+            cost = std::max(fma_jk.cost, fma_ki.cost);
+         }
       } else {
          for (std::size_t t1 = 1; t1 < t; ++t1) {
             const std::size_t t2 = t - t1;
@@ -220,16 +241,19 @@ class DPSolver : public Properties {
       }
 
       // Dense
-      cost += m_chain.jacobians[j].m * m_chain.jacobians[k].m *
-              m_chain.jacobians[i].n;
+      const std::size_t op_cost = m_chain->jacobians[j].m *
+                                  m_chain->jacobians[k].m *
+                                  m_chain->jacobians[i].n;
+      cost += op_cost;
 
       DPNode& fma_ji = node(j, i, t);
       if (cost < fma_ji.cost) {
          fma_ji.op = Operation::MULTIPLICATION;
+         fma_ji.mode = Mode::NONE;
+         fma_ji.op_cost = op_cost;
+         fma_ji.cost = cost;
          fma_ji.position_split = k;
          fma_ji.thread_split = thread_split;
-         fma_ji.mode = Mode::NONE;
-         fma_ji.cost = cost;
          fma_ji.visited = true;
       }
    }
@@ -240,27 +264,33 @@ class DPSolver : public Properties {
         const std::size_t t) -> void {
 
       std::size_t cost;
+      std::size_t op_cost;
       if constexpr (mode == Mode::ADJOINT) {
-         if (m_chain.subchain_memory_requirement(k, i) > m_available_memory) {
+         if (m_chain->subchain_memory_requirement(k, i) > m_available_memory) {
             return;
          }
 
+         op_cost = m_chain->subchain_fma<mode>(k, i, j);
+
          const DPNode& fma_jk = node(j, k + 1, t);
          assert(fma_jk.visited);
-         cost = fma_jk.cost + m_chain.subchain_fma<mode>(k, i);
+         cost = fma_jk.cost + op_cost;
       } else {
+         op_cost = m_chain->subchain_fma<mode>(j, k + 1, i);
+
          const DPNode& fma_ki = node(k, i, t);
          assert(fma_ki.visited);
-         cost = fma_ki.cost + m_chain.subchain_fma<mode>(j, k + 1);
+         cost = fma_ki.cost + op_cost;
       }
 
       DPNode& fma_ji = node(j, i, t);
       if (cost < fma_ji.cost) {
          fma_ji.op = Operation::ELIMINATION;
+         fma_ji.mode = mode;
+         fma_ji.op_cost = op_cost;
+         fma_ji.cost = cost;
          fma_ji.position_split = k;
          fma_ji.thread_split = 1;
-         fma_ji.mode = mode;
-         fma_ji.cost = cost;
       }
    }
 };

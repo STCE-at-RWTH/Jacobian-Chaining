@@ -15,28 +15,28 @@ namespace jcdp {
 
 struct Jacobian {
    //! Index of input variable.
-   std::size_t i{0};
+   std::size_t i {0};
    //! Index of output variable.
-   std::size_t j{0};
+   std::size_t j {0};
 
    //! Input size.
-   std::size_t n{0};
+   std::size_t n {0};
    //! Output size.
-   std::size_t m{0};
+   std::size_t m {0};
 
    //! Number of super-diagonals (upper bandwidth).
-   std::size_t ku{0};
+   std::size_t ku {0};
    //! Number of sub-diagonals (lower bandwidth).
-   std::size_t kl{0};
+   std::size_t kl {0};
    //! Number of non-zero elements (general sparsity).
-   std::size_t non_zero_elements{0};
+   std::size_t non_zero_elements {0};
 
    //! Amount of edges in the DAG of the primal function (~ size of tape).
-   std::size_t edges_in_dag{0};
+   std::size_t edges_in_dag {0};
    //! Runtime factor of a single tangent evaluation (y^(1) = F' * x^(1)).
-   double tangent_factor{1};
+   double tangent_factor {1};
    //! Runtime factor of a single adjoint evaluation (x_(1) = y_(1) * F').
-   double adjoint_factor{1};
+   double adjoint_factor {1};
 
    //! Generate a random Jacobian matrix.
    template<class Generator, class IntDistribution, class RealDistribution>
@@ -65,6 +65,9 @@ struct Jacobian {
       file << std::format(
            "      <data key=\"tangent_cost\">{}</data>\n",
            single_evaluation_fma<Mode::TANGENT>());
+      file << std::format(
+           "      <data key=\"adjoint_memory\">{}</data>\n", edges_in_dag);
+      file << "      <data key=\"has_model\">1</data>\n";
       file << "    </edge>\n";
    }
 

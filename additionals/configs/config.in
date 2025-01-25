@@ -1,0 +1,10 @@
+length 3
+size_range 5 50
+dag_size_range 1000 10000
+tangent_factor_range 1 1
+adjoint_factor_range 1 1
+density_range 0.1 0.3
+available_threads 2
+available_memory 100000000000000000000000000
+matrix_free 0
+seed 4711

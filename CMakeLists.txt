@@ -98,14 +98,12 @@ include(enable_sanitation)
 # endif()
 
 # **************************************************************************** #
-# Include some modules (compiler flags, coverage, iwyu) and JCDP modules
+# Include more modules (compiler flags, iwyu, OpenMP)
 # **************************************************************************** #
 include(compiler_flags)
 include(include_what_you_use)
 include(configure_compiler_warnings)
-
-# Include JCDP modules
-# include(JCDP_openmp_backend)
+include(openmp_backend)
 
 # **************************************************************************** #
 # JCDP include directories

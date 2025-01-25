@@ -20,13 +20,13 @@ namespace jcdp {
 
 class JacobianChainProperties : public Properties {
  public:
-   size_t chain_length{1};
-   std::pair<size_t, size_t> size_range{1, 1};
-   std::pair<size_t, size_t> dag_size_range{1, 1};
-   std::pair<double, double> tangent_factor_range{1.0, 1.0};
-   std::pair<double, double> adjoint_factor_range{1.0, 1.0};
-   std::pair<double, double> density_range{0.0, 1.0};
-   size_t seed{[]() -> size_t {
+   size_t chain_length {1};
+   std::pair<size_t, size_t> size_range {1, 1};
+   std::pair<size_t, size_t> dag_size_range {1, 1};
+   std::pair<double, double> tangent_factor_range {1.0, 1.0};
+   std::pair<double, double> adjoint_factor_range {1.0, 1.0};
+   std::pair<double, double> density_range {0.0, 1.0};
+   size_t seed {[]() -> size_t {
       std::random_device rd;
       return rd();
    }()};
@@ -55,9 +55,11 @@ class JacobianChainProperties : public Properties {
 
 struct JacobianChain {
    std::vector<Jacobian> jacobians;
+   std::size_t optimized_cost {std::numeric_limits<std::size_t>::max()};
 
    template<Mode mode>
-   inline auto subchain_fma(const std::size_t j, const std::size_t i) const
+   inline auto subchain_fma(
+        const std::size_t j, const std::size_t i, const std::size_t seed) const
         -> std::size_t {
       assert(j < jacobians.size() && i < jacobians.size() && j >= i);
 
@@ -67,9 +69,9 @@ struct JacobianChain {
       }
 
       if constexpr (mode == Mode::ADJOINT) {
-         return jacobians[j].m * single_eval_fma;
+         return jacobians[seed].m * single_eval_fma;
       } else {
-         return jacobians[i].n * single_eval_fma;
+         return jacobians[seed].n * single_eval_fma;
       }
    }
 
@@ -119,6 +121,9 @@ struct JacobianChain {
          chain.jacobians[i].j = i + 1;
       }
 
+
+      chain.jacobians[2].edges_in_dag *= 100;
+
       return chain;
    }
 
@@ -132,17 +137,25 @@ struct JacobianChain {
                  "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
                  "xsi:schemaLocation=\"http://graphml.graphdrawing.org/xmlns "
                  "http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd\">\n";
-         file << "  <key id=\"adjoint_cost\" for=\"edge\" "
-                 "attr.name=\"adjoint_cost\" attr.type=\"long\" />\n";
-         file << "  <key id=\"tangent_cost\" for=\"edge\" "
-                 "attr.name=\"tangent_cost\" attr.type=\"long\" />\n";
+         file << "  <key id=\"fma_upper_bound\" for=\"graph\" "
+                 "attr.name=\"fma_upper_bound\" attr.type=\"long\" />\n";
          file << "  <key id=\"index\" for=\"node\" "
                  "attr.name=\"index\" attr.type=\"long\" />\n";
          file << "  <key id=\"size\" for=\"node\" "
                  "attr.name=\"size\" attr.type=\"long\" />\n";
+         file << "  <key id=\"adjoint_cost\" for=\"edge\" "
+                 "attr.name=\"adjoint_cost\" attr.type=\"long\" />\n";
+         file << "  <key id=\"tangent_cost\" for=\"edge\" "
+                 "attr.name=\"tangent_cost\" attr.type=\"long\" />\n";
+         file << "  <key id=\"adjoint_memory\" for=\"edge\" "
+                 "attr.name=\"adjoint_memory\" attr.type=\"long\" />\n";
+         file << "  <key id=\"has_model\" for=\"edge\" "
+                 "attr.name=\"has_model\" attr.type=\"boolean\" />\n";
          file << "  <graph id=\"G\" edgedefault=\"directed\" "
                  "parse.nodeids=\"free\" parse.edgeids=\"canonical\" "
                  "parse.order=\"nodesfirst\">\n";
+         file << std::format(
+              "    <data key=\"fma_upper_bound\">{}</data>\n", optimized_cost);
 
          jacobians.at(0).print_graphml_input_node(file);
          for (std::size_t i = 0; i < jacobians.size(); ++i) {
