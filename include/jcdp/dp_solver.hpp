@@ -68,7 +68,7 @@ class DPSolver : public Properties {
    auto solve() -> std::size_t {
       // Accumulation costs
       #pragma omp parallel for
-      for (std::size_t j = 0; j < m_length; ++j) {
+      for (std::ptrdiff_t j = 0; j < m_length; ++j) {
          try_accumulation<Mode::TANGENT>(j);
          try_accumulation<Mode::ADJOINT>(j);
       }
@@ -80,7 +80,7 @@ class DPSolver : public Properties {
          for (std::size_t len = 2; len <= m_length; ++len) {
             // Chains with same lengths and threads are independent!
             #pragma omp parallel for
-            for (std::size_t j = len - 1; j < m_length; ++j) {
+            for (std::ptrdiff_t j = len - 1; j < m_length; ++j) {
                const std::size_t i = j - (len - 1);
 
                for (std::size_t k = i; k < j; k++) {
@@ -188,8 +188,10 @@ class DPSolver : public Properties {
    template<Mode mode>
    auto try_accumulation(const std::size_t j) -> void {
       if constexpr (mode == Mode::ADJOINT) {
-         if (m_chain->subchain_memory_requirement(j, j) > m_available_memory) {
-            return;
+         if (m_available_memory > 0) {
+            if (m_chain->subchain_memory_requirement(j, j) > m_available_memory) {
+               return;
+            }
          }
       }
 
@@ -266,8 +268,10 @@ class DPSolver : public Properties {
       std::size_t cost;
       std::size_t op_cost;
       if constexpr (mode == Mode::ADJOINT) {
-         if (m_chain->subchain_memory_requirement(k, i) > m_available_memory) {
-            return;
+         if (m_available_memory > 0) {
+            if (m_chain->subchain_memory_requirement(k, i) > m_available_memory) {
+               return;
+            }
          }
 
          op_cost = m_chain->subchain_fma<mode>(k, i, j);
