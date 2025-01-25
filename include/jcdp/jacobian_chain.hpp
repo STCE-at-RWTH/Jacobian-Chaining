@@ -121,9 +121,6 @@ struct JacobianChain {
          chain.jacobians[i].j = i + 1;
       }
 
-
-      chain.jacobians[2].edges_in_dag *= 100;
-
       return chain;
    }
 

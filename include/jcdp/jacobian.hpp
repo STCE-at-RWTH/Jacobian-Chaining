@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <format>
 #include <fstream>
+#include <optional>
 
 #include "jcdp/operation.hpp"
 

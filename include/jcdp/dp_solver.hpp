@@ -66,9 +66,11 @@ class DPSolver : public Properties {
    }
 
    auto solve() -> std::size_t {
+      const std::ptrdiff_t j_max = static_cast<std::ptrdiff_t>(m_length);
+
       // Accumulation costs
       #pragma omp parallel for
-      for (std::ptrdiff_t j = 0; j < m_length; ++j) {
+      for (std::ptrdiff_t j = 0; j < j_max; ++j) {
          try_accumulation<Mode::TANGENT>(j);
          try_accumulation<Mode::ADJOINT>(j);
       }
@@ -80,10 +82,10 @@ class DPSolver : public Properties {
          for (std::size_t len = 2; len <= m_length; ++len) {
             // Chains with same lengths and threads are independent!
             #pragma omp parallel for
-            for (std::ptrdiff_t j = len - 1; j < m_length; ++j) {
-               const std::size_t i = j - (len - 1);
+            for (std::ptrdiff_t j = len - 1; j < j_max; ++j) {
+               const std::ptrdiff_t i = j - (len - 1);
 
-               for (std::size_t k = i; k < j; k++) {
+               for (std::ptrdiff_t k = i; k < j; k++) {
                   try_multiplication(j, i, k, threads);
 
                   if (m_matrix_free) {
@@ -215,7 +217,8 @@ class DPSolver : public Properties {
       std::size_t cost = std::numeric_limits<std::size_t>::max();
       std::size_t thread_split = 0;
 
-      if (t == 1) {
+      // Perform fma_jk and fma_ki in serial
+      {
          const DPNode& fma_jk = node(j, k + 1, t);
          const DPNode& fma_ki = node(k, i, t);
          assert(fma_jk.visited);
@@ -226,7 +229,10 @@ class DPSolver : public Properties {
          } else {
             cost = std::max(fma_jk.cost, fma_ki.cost);
          }
-      } else {
+      }
+
+      // Perform fma_jk and fma_ki in prallel
+      if (t > 1) {
          for (std::size_t t1 = 1; t1 < t; ++t1) {
             const std::size_t t2 = t - t1;
             const DPNode& fma_jk = node(j, k + 1, t1);

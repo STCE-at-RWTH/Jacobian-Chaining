@@ -1,0 +1,4 @@
+# Converts line endings when working with WSL and Windows in the same git repo
+* text=auto eol=lf
+*.{cmd,[cC][mM][dD]} text eol=crlf
+*.{bat,[bB][aA][tT]} text eol=crlf
