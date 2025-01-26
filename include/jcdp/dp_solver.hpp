@@ -50,22 +50,24 @@ class DPSolver : public Properties {
    auto init(JacobianChain& chain) -> void {
       m_chain = &chain;
       m_length = chain.jacobians.size();
+      m_usable_threads = std::min(m_available_threads, m_length);
 
       std::size_t dp_nodes = m_length * (m_length + 1) / 2;
-      if (m_available_threads >= m_length || m_available_threads < 1) {
-         m_available_threads = 0;
-      } else {
-         dp_nodes *= m_available_threads;
+      if (m_usable_threads > 0) {
+         dp_nodes *= m_usable_threads;
 
          // Correct for preaccumulation nodes which only ever use one thread
-         dp_nodes -= (m_available_threads - 1) * m_length;
+         dp_nodes -= (m_usable_threads - 1) * m_length;
       }
 
       m_dptable.clear();
       m_dptable.resize(dp_nodes);
+
+      m_chain->optimized_costs.clear();
+      m_chain->optimized_costs.resize(1 + m_usable_threads);
    }
 
-   auto solve() -> std::size_t {
+   auto solve() -> void {
       const std::ptrdiff_t j_max = static_cast<std::ptrdiff_t>(m_length);
 
       // Accumulation costs
@@ -75,7 +77,7 @@ class DPSolver : public Properties {
          try_accumulation<Mode::ADJOINT>(j);
       }
 
-      // Iterate over amount of available threads. m_available_threads can be 0
+      // Iterate over amount of available threads. m_usable_threads can be 0
       // which means unlimited threads, therefore using do-while loop here.
       std::size_t threads = 1;
       do {
@@ -95,15 +97,25 @@ class DPSolver : public Properties {
                }
             }
          }
-      } while (++threads <= m_available_threads);
+      } while (++threads <= m_usable_threads);
 
-      m_chain->optimized_cost = node(m_length - 1, 0, m_available_threads).cost;
-      return m_chain->optimized_cost;
+      if (m_usable_threads > 0) {
+         for (threads = 1; threads <= m_usable_threads; ++threads) {
+            m_chain->optimized_costs[threads] = get_solution(threads);
+         }
+      } else {
+         m_chain->optimized_costs[0] = get_solution();
+      }
+   }
+
+   auto get_solution(const std::optional<std::size_t> threads = {})
+        -> std::size_t {
+      return node(m_length - 1, 0, threads.value_or(m_usable_threads)).cost;
    }
 
    auto print_sequence() -> void {
       const std::size_t threads =
-           ((m_available_threads == 0) ? m_length : m_available_threads);
+           ((m_usable_threads == 0) ? m_length : m_usable_threads);
 
       print_operations(m_length - 1, 0, {0, threads - 1});
    }
@@ -161,6 +173,7 @@ class DPSolver : public Properties {
       std::println("\t{}", fma_ji.op_cost);
    }
 
+
  private:
    std::size_t m_length {0};
    bool m_matrix_free {false};
@@ -168,15 +181,19 @@ class DPSolver : public Properties {
    bool m_sparse {false};
    std::size_t m_available_memory {0};
    std::size_t m_available_threads {0};
+   std::size_t m_usable_threads {0};
    JacobianChain* m_chain {nullptr};
 
    std::vector<DPNode> m_dptable;
 
    auto node(const std::size_t j, const std::size_t i, const std::size_t t)
         -> DPNode& {
+      assert(j < m_length);
+      assert(i < m_length && i <= j);
+      assert(t <= m_usable_threads);
 
       std::size_t idx = j * (j + 1) / 2 + i;
-      if (m_available_threads > 0 && j != i) {
+      if (m_usable_threads > 0 && j != i) {
          idx += (t - 1) * (m_length + 1) * (m_length) / 2;
 
          // Correct for preaccumulation nodes which only ever use one thread
@@ -225,7 +242,7 @@ class DPSolver : public Properties {
          assert(fma_jk.visited);
          assert(fma_ki.visited);
 
-         if (m_available_threads > 0) {
+         if (m_usable_threads > 0) {
             cost = fma_jk.cost + fma_ki.cost;
          } else {
             cost = std::max(fma_jk.cost, fma_ki.cost);

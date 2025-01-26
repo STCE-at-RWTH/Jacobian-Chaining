@@ -102,6 +102,21 @@ inline auto PropertyInfo<std::pair<T1, T2>>::from_pipe(std::istream& i)
    i >> this->m_ptr->first >> this->m_ptr->second;
 }
 
+template<typename T>
+inline auto PropertyInfo<std::vector<T>>::from_pipe(std::istream& i) -> void {
+   this->m_ptr->clear();
+
+   std::string line;
+   i >> line;
+   std::istringstream vec_elems(line);
+
+   std::string item;
+   while (std::getline(vec_elems, item, ',')) {
+      this->m_ptr->emplace_back();
+      std::istringstream(item) >> this->m_ptr->back();
+   }
+}
+
 //! Return the value as a string.
 template<typename T>
 inline auto PropertyInfo<T>::to_string() const -> const std::string {
@@ -113,6 +128,19 @@ inline auto PropertyInfo<std::pair<T1, T2>>::to_string() const
      -> const std::string {
    return std::to_string(this->m_ptr->first) + " " +
           std::to_string(this->m_ptr->second);
+}
+
+template<typename T>
+inline auto PropertyInfo<std::vector<T>>::to_string() const
+     -> const std::string {
+   std::ostringstream oss;
+   for (std::size_t i = 0; i < this->m_ptr->size(); ++i) {
+      if (i != 0) {
+         oss << ",";
+      }
+      oss << this->m_ptr->at(i);
+   }
+   return oss.str();
 }
 
 /******************************************************************************
@@ -189,11 +217,14 @@ inline auto Properties::put(
  *
  * First checks if the file may be empty or invalid.
  *
- * @param[in] in std::ifstream from which to read the properties.
+ * @param[in] filename File from which to read the properties.
  * @param[in] skip_not_registered_keys Ignore when we encounter an unknown key.
  ******************************************************************************/
 inline auto Properties::parse_config(
-     std::ifstream&& in, const bool skip_not_registered_keys) -> void {
+     const std::filesystem::path& config_filename,
+     const bool skip_not_registered_keys) -> void {
+
+   std::ifstream in(config_filename);
    if (in.eof() || in.fail() || !in.good()) {
       throw BadConfigFileError();
    }

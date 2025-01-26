@@ -7,6 +7,7 @@
 #include <list>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
@@ -123,6 +124,18 @@ class PropertyInfo<std::pair<T1, T2>> : public PropertyInfoBase<std::pair<T1, T2
    virtual auto to_string() const -> const std::string override final;
 };
 
+template<typename T>
+class PropertyInfo<std::vector<T>> : public PropertyInfoBase<std::vector<T>> {
+ public:
+   using PropertyInfoBase<std::vector<T>>::PropertyInfoBase;
+
+   //! Implements pipe function by deferencing stored pointer _ptr.
+   virtual auto from_pipe(std::istream& i) -> void override final;
+
+   //! Return the value as a string.
+   virtual auto to_string() const -> const std::string override final;
+};
+
 /******************************************************************************
  * @brief Allows to parse Arguments to Properties from the command line and
  *        config files.
@@ -155,7 +168,7 @@ class Properties {
    ~Properties();
 
    //! Parses a config file from a std::ifstream.
-   auto parse_config(std::ifstream&& in, bool skip_not_registered_keys = false) -> void;
+   auto parse_config(const std::filesystem::path& config_filename, bool skip_not_registered_keys = false) -> void;
 
    //! Prints the keys and descriptions of all registeres properties in a
    //! structured way.

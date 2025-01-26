@@ -4,8 +4,6 @@
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 #include <cstddef>
-#include <format>
-#include <fstream>
 #include <optional>
 
 #include "jcdp/operation.hpp"
@@ -49,28 +47,6 @@ struct Jacobian {
         RealDistribution& density_distribution,
         const std::optional<std::size_t> n = {}) -> Jacobian;
 
-   inline auto print_graphml_input_node(std::ofstream& file) const -> void {
-      print_graphml_node(file, i, n);
-   }
-
-   inline auto print_graphml_output_node(std::ofstream& file) const -> void {
-      print_graphml_node(file, j, m);
-   }
-
-   inline auto print_graphml_edge(std::ofstream& file) const -> void {
-      file << std::format(
-           "    <edge id=\"{}\" source=\"{}\" target=\"{}\">\n", i, i, j);
-      file << std::format(
-           "      <data key=\"adjoint_cost\">{}</data>\n",
-           single_evaluation_fma<Mode::ADJOINT>());
-      file << std::format(
-           "      <data key=\"tangent_cost\">{}</data>\n",
-           single_evaluation_fma<Mode::TANGENT>());
-      file << std::format(
-           "      <data key=\"adjoint_memory\">{}</data>\n", edges_in_dag);
-      file << "      <data key=\"has_model\">1</data>\n";
-      file << "    </edge>\n";
-   }
 
    template<Mode mode>
    inline auto single_evaluation_fma() const -> std::size_t {
@@ -80,22 +56,12 @@ struct Jacobian {
          return static_cast<std::size_t>(edges_in_dag * tangent_factor);
       }
    }
-
- private:
-   inline auto print_graphml_node(
-        std::ofstream& file, const std::size_t index,
-        const std::size_t size) const -> void {
-      file << std::format("    <node id=\"{}\">\n", index);
-      file << std::format("      <data key=\"index\">{}</data>\n", index);
-      file << std::format("      <data key=\"size\">{}</data>\n", size);
-      file << "    </node>\n";
-   }
 };
 
 }  // end namespace jcdp
 
 // >>>>>>>>>>>>>>>> INCLUDE TEMPLATE AND INLINE DEFINITIONS <<<<<<<<<<<<<<<<< //
 
-#include "jcdp/jacobian.inl"  // IWYU pragma: export
+// #include "jcdp/jacobian.inl"  // IWYU pragma: export
 
 #endif  // JCDP_JACOBIAN_HPP_
