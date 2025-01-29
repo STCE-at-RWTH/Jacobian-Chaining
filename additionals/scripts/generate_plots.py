@@ -46,7 +46,7 @@ schedulers = [
 ]
 
 # processors = ["5", "6", "7", "8", "9", "10"]
-processors = ["2", "3", "4", "5"]
+processors = ["1", "2", "6"]
 
 heuristic_labels = {
   "GreedyMinCost": "GreedyMinCost",
@@ -99,20 +99,22 @@ def main():
             #     axs[i, j].yaxis.tick_right()
 
     df2 = pd.DataFrame()
-    for i, df in enumerate(df_list):
-        label = "dp"
-        df2[processors[i]] = df[reference + processors[i]] / df[label] * 100
-        # if any(df2[p] < 25):
-        #     print(label)
-        #     print(df2[p][df2[p] < 25])
-        print(label + " " + str(len(list(filter(lambda x: x >= 100, list(df2[processors[i]])))) / len(df2[processors[i]])))
-        print(label + " " + str(min(list(df2[processors[i]]))))
+    for df in df_list:
+        for p in processors:
+            label = "dp/" + p
+            df2[p] = df[reference + p] / df[label] * 100
+            # if any(df2[p] < 25):
+            #     print(label)
+            #     print(df2[p][df2[p] < 25])
+            print(label + " " + str(len(list(filter(lambda x: x >= 100, list(df2[p])))) / len(df2[p])))
+            print(label + " " + str(min(list(df2[p]))))
 
     axs.yaxis.set_major_formatter(mtick.PercentFormatter())
     axs.set(ylim=(50, 105))
     axs.axhline(100, color=".3", dashes=(2, 2))
 
     sns.boxplot(
+        # df2[df["finished"] == 1],
         df2,
         whis=[5, 95],
         width=0.5,

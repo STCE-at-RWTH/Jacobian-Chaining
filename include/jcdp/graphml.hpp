@@ -17,14 +17,12 @@
 namespace jcdp {
 namespace graphml {
 
-inline auto write_header(std::ofstream& file) -> void {
+inline auto write_header(std::ofstream& file, const JacobianChain& chain) -> void {
    file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
    file << "<graphml xmlns=\"http://graphml.graphdrawing.org/xmlns\" "
            "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
            "xsi:schemaLocation=\"http://graphml.graphdrawing.org/xmlns "
            "http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd\">\n";
-   file << "  <key id=\"fma_upper_bound\" for=\"graph\" "
-           "attr.name=\"fma_upper_bound\" attr.type=\"long\" />\n";
    file << "  <key id=\"index\" for=\"node\" "
            "attr.name=\"index\" attr.type=\"long\" />\n";
    file << "  <key id=\"size\" for=\"node\" "
@@ -37,6 +35,17 @@ inline auto write_header(std::ofstream& file) -> void {
            "attr.name=\"adjoint_memory\" attr.type=\"long\" />\n";
    file << "  <key id=\"has_model\" for=\"edge\" "
            "attr.name=\"has_model\" attr.type=\"boolean\" />\n";
+
+   constexpr std::string_view key_str {
+        "  <key id=\"fma_upper_bound_{}\" for=\"graph\" attr.name=\"fma_upper_bound_{}\" attr.type=\"long\" />\n"};
+   if (chain.optimized_costs.size() > 1) {
+      for (std::size_t threads = 1; threads < chain.optimized_costs.size(); ++threads) {
+         file << std::format(key_str, threads, threads);
+      }
+   } else {
+      file << std::format(key_str, chain.length(), chain.length());
+   }
+
    file << "  <graph id=\"G\" edgedefault=\"directed\" "
            "parse.nodeids=\"free\" parse.edgeids=\"canonical\" "
            "parse.order=\"nodesfirst\">\n";
@@ -81,19 +90,32 @@ inline auto write_edge(std::ofstream& file, const Jacobian& jac) -> void {
    file << "    </edge>\n";
 }
 
+inline auto write_optimized_costs(
+     std::ofstream& file, const JacobianChain& chain) -> void {
+
+   constexpr std::string_view data_str {"    <data key=\"fma_upper_bound_{}\">{}</data>\n"};
+   if (chain.optimized_costs.size() > 1) {
+      for (std::size_t threads = 1; threads < chain.optimized_costs.size(); ++threads) {
+         file << std::format(data_str, threads, chain.optimized_costs[threads]);
+      }
+   } else {
+      file << std::format(data_str, chain.length(), chain.optimized_costs[0]);
+   }
+}
+
 }  // end namespace graphml
 
 inline auto write_graphml(
-     const std::filesystem::path& output_dir, const JacobianChain& chain,
-     const std::optional<std::size_t> threads = {}) -> void {
+     const std::filesystem::path& output_dir, const JacobianChain& chain) -> void {
 
-   const std::size_t t = threads.value_or(chain.optimized_costs.size() - 1);
-   std::ofstream file(output_dir / std::format("chain_{}_{}_{}.xml", chain.jacobians.size(), t, chain.id));
+   std::filesystem::create_directories(output_dir);
+   std::filesystem::path filename = output_dir;
+   filename /= std::format("chain_{}_{}.xml", chain.jacobians.size(), chain.id);
+
+   std::ofstream file(filename);
    if (file.is_open()) {
-      graphml::write_header(file);
-      file << std::format(
-           "    <data key=\"fma_upper_bound\">{}</data>\n", chain.optimized_costs[t]);
-
+      graphml::write_header(file, chain);
+      graphml::write_optimized_costs(file, chain);
       graphml::write_input_node(file, chain.jacobians.at(0));
       for (std::size_t i = 0; i < chain.jacobians.size(); ++i) {
          graphml::write_output_node(file, chain.jacobians.at(i));
@@ -106,18 +128,6 @@ inline auto write_graphml(
       file.close();
    } else {
       throw std::runtime_error("Unable to open file");
-   }
-}
-
-inline auto write_graphml_for_all_solutions(
-     const std::filesystem::path& output_dir, const JacobianChain& chain) -> void {
-
-   if (chain.optimized_costs.size() > 1) {
-      for (std::size_t threads = 1; threads < chain.optimized_costs.size(); ++threads) {
-         write_graphml(output_dir, chain, threads);
-      }
-   } else {
-      write_graphml(output_dir, chain);
    }
 }
 

@@ -19,7 +19,7 @@ struct JacobianChain {
    std::vector<std::size_t> optimized_costs;
    std::size_t id;
 
-   inline auto length() -> std::size_t {
+   inline auto length() const -> std::size_t {
       return jacobians.size();
    }
 

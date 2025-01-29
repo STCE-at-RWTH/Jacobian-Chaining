@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
       return -1;
    }
 
-   std::filesystem::path output_dir;
+   std::filesystem::path output_dir = ".";
    if (argc > 2) {
       output_dir = std::filesystem::path(argv[2]);
    }
@@ -50,8 +50,16 @@ int main(int argc, char* argv[]) {
          "Adjoint cost: {}",
          chain.subchain_fma<jcdp::Mode::ADJOINT>(
                chain.length() - 1, 0, chain.length() - 1));
-      std::println("Optimized cost: {}\n", chain.optimized_costs.back());
 
+      if (chain.optimized_costs.size() > 1) {
+         for (std::size_t threads = 1; threads < chain.optimized_costs.size(); ++threads) {
+            std::println("Optimized cost ({}): {}", threads, chain.optimized_costs[threads]);
+         }
+      } else {
+         std::println("Optimized cost (unlimited): {}", chain.optimized_costs[0]);
+      }
+
+      std::println();
       solver.print_sequence();
       jcdp::write_graphml(output_dir, chain);
    }

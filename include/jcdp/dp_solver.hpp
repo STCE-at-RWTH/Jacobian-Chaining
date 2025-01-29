@@ -190,10 +190,12 @@ class DPSolver : public Properties {
         -> DPNode& {
       assert(j < m_length);
       assert(i < m_length && i <= j);
-      assert(t <= m_usable_threads);
 
       std::size_t idx = j * (j + 1) / 2 + i;
       if (m_usable_threads > 0 && j != i) {
+         assert(t >= 1);
+         assert(t <= m_usable_threads);
+
          idx += (t - 1) * (m_length + 1) * (m_length) / 2;
 
          // Correct for preaccumulation nodes which only ever use one thread
