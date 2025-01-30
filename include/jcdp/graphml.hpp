@@ -4,9 +4,9 @@
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 #include <cstddef>
+#include <filesystem>
 #include <format>
 #include <fstream>
-#include <filesystem>
 
 #include "jcdp/jacobian.hpp"
 #include "jcdp/jacobian_chain.hpp"
@@ -17,7 +17,8 @@
 namespace jcdp {
 namespace graphml {
 
-inline auto write_header(std::ofstream& file, const JacobianChain& chain) -> void {
+inline auto write_header(std::ofstream& file, const JacobianChain& chain)
+     -> void {
    file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
    file << "<graphml xmlns=\"http://graphml.graphdrawing.org/xmlns\" "
            "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
@@ -37,9 +38,11 @@ inline auto write_header(std::ofstream& file, const JacobianChain& chain) -> voi
            "attr.name=\"has_model\" attr.type=\"boolean\" />\n";
 
    constexpr std::string_view key_str {
-        "  <key id=\"fma_upper_bound_{}\" for=\"graph\" attr.name=\"fma_upper_bound_{}\" attr.type=\"long\" />\n"};
+        "  <key id=\"fma_upper_bound_{}\" for=\"graph\" "
+        "attr.name=\"fma_upper_bound_{}\" attr.type=\"long\" />\n"};
    if (chain.optimized_costs.size() > 1) {
-      for (std::size_t threads = 1; threads < chain.optimized_costs.size(); ++threads) {
+      for (std::size_t threads = 1; threads < chain.optimized_costs.size();
+           ++threads) {
          file << std::format(key_str, threads, threads);
       }
    } else {
@@ -80,10 +83,10 @@ inline auto write_edge(std::ofstream& file, const Jacobian& jac) -> void {
         jac.j);
    file << std::format(
         "      <data key=\"adjoint_cost\">{}</data>\n",
-        jac.template single_evaluation_fma<Mode::ADJOINT>());
+        jac.template fma<Mode::ADJOINT>());
    file << std::format(
         "      <data key=\"tangent_cost\">{}</data>\n",
-        jac.template single_evaluation_fma<Mode::TANGENT>());
+        jac.template fma<Mode::TANGENT>());
    file << std::format(
         "      <data key=\"adjoint_memory\">{}</data>\n", jac.edges_in_dag);
    file << "      <data key=\"has_model\">1</data>\n";
@@ -93,9 +96,11 @@ inline auto write_edge(std::ofstream& file, const Jacobian& jac) -> void {
 inline auto write_optimized_costs(
      std::ofstream& file, const JacobianChain& chain) -> void {
 
-   constexpr std::string_view data_str {"    <data key=\"fma_upper_bound_{}\">{}</data>\n"};
+   constexpr std::string_view data_str {
+        "    <data key=\"fma_upper_bound_{}\">{}</data>\n"};
    if (chain.optimized_costs.size() > 1) {
-      for (std::size_t threads = 1; threads < chain.optimized_costs.size(); ++threads) {
+      for (std::size_t threads = 1; threads < chain.optimized_costs.size();
+           ++threads) {
          file << std::format(data_str, threads, chain.optimized_costs[threads]);
       }
    } else {
@@ -106,22 +111,23 @@ inline auto write_optimized_costs(
 }  // end namespace graphml
 
 inline auto write_graphml(
-     const std::filesystem::path& output_dir, const JacobianChain& chain) -> void {
+     const std::filesystem::path& output_dir, const JacobianChain& chain)
+     -> void {
 
    std::filesystem::create_directories(output_dir);
    std::filesystem::path filename = output_dir;
-   filename /= std::format("chain_{}_{}.xml", chain.jacobians.size(), chain.id);
+   filename /= std::format("chain_{}_{}.xml", chain.length(), chain.id);
 
    std::ofstream file(filename);
    if (file.is_open()) {
       graphml::write_header(file, chain);
       graphml::write_optimized_costs(file, chain);
-      graphml::write_input_node(file, chain.jacobians.at(0));
-      for (std::size_t i = 0; i < chain.jacobians.size(); ++i) {
-         graphml::write_output_node(file, chain.jacobians.at(i));
+      graphml::write_input_node(file, chain.elemental_jacobians.at(0));
+      for (std::size_t i = 0; i < chain.length(); ++i) {
+         graphml::write_output_node(file, chain.elemental_jacobians.at(i));
       }
-      for (std::size_t i = 0; i < chain.jacobians.size(); ++i) {
-         graphml::write_edge(file, chain.jacobians.at(i));
+      for (std::size_t i = 0; i < chain.length(); ++i) {
+         graphml::write_edge(file, chain.elemental_jacobians.at(i));
       }
 
       graphml::write_footer(file);

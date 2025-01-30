@@ -1,5 +1,5 @@
-#ifndef JCDP_DP_SOLVER_HPP_
-#define JCDP_DP_SOLVER_HPP_
+#ifndef JCDP_OPTIMIZERS_DYNAMIC_PROGRAMMING_HPP_
+#define JCDP_OPTIMIZERS_DYNAMIC_PROGRAMMING_HPP_
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
@@ -10,47 +10,26 @@
 
 #include "jcdp/jacobian_chain.hpp"
 #include "jcdp/operation.hpp"
-#include "jcdp/util/properties.hpp"
+#include "jcdp/optimizer/optimizer.hpp"
+#include "jcdp/sequence.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
-namespace jcdp {
+namespace jcdp::optimizer {
 
 struct DPNode {
-   Operation op {Operation::NONE};
-   Mode mode {Mode::NONE};
-   std::size_t op_cost {std::numeric_limits<std::size_t>::max()};
+   Operation op {};
    std::size_t cost {std::numeric_limits<std::size_t>::max()};
-   std::size_t position_split {0};
    std::size_t thread_split {0};
    bool visited {false};
 };
 
-class DPSolver : public Properties {
+class DynamicProgrammingOptimizer : public Optimizer {
  public:
-   DPSolver() {
-      register_property(
-           m_matrix_free, "matrix_free",
-           "Wether we optimize the matrix-free problem.");
-      register_property(
-           m_banded, "banded",
-           "Wether the assume that the Jacobians are banded.");
-      register_property(
-           m_sparse, "sparse",
-           "Wether the assume that the Jacobians are sparse.");
-      register_property(
-           m_available_memory, "available_memory",
-           "Amount of available persistent memory.");
-      register_property(
-           m_available_threads, "available_threads",
-           "Amount of threads that are available for the evaluation of the "
-           "jacobian chain.");
-   }
+   DynamicProgrammingOptimizer() = default;
 
-   auto init(JacobianChain& chain) -> void {
-      m_chain = &chain;
-      m_length = chain.jacobians.size();
-      m_usable_threads = std::min(m_available_threads, m_length);
+   virtual auto init(JacobianChain& chain) -> void override final {
+      Optimizer::init(chain);
 
       std::size_t dp_nodes = m_length * (m_length + 1) / 2;
       if (m_usable_threads > 0) {
@@ -62,12 +41,9 @@ class DPSolver : public Properties {
 
       m_dptable.clear();
       m_dptable.resize(dp_nodes);
-
-      m_chain->optimized_costs.clear();
-      m_chain->optimized_costs.resize(1 + m_usable_threads);
    }
 
-   auto solve() -> void {
+   virtual auto solve() -> void override final {
       const std::ptrdiff_t j_max = static_cast<std::ptrdiff_t>(m_length);
 
       // Accumulation costs
@@ -92,7 +68,14 @@ class DPSolver : public Properties {
 
                   if (m_matrix_free) {
                      try_elimination<Mode::TANGENT>(j, i, k, threads);
-                     try_elimination<Mode::ADJOINT>(j, i, k, threads);
+
+                     // Search for adjoint elimination from the back to the
+                     // to get the longest adjoint elimination chain possible.
+                     // Otherwise we get a lot of single adjoint eliminations
+                     // one after another. Doesn't affect fma, just reduces work
+                     // and makes output smaller.
+                     const std::size_t k2 = j - (k - i + 1);
+                     try_elimination<Mode::ADJOINT>(j, i, k2, threads);
                   }
                }
             }
@@ -113,89 +96,95 @@ class DPSolver : public Properties {
       return node(m_length - 1, 0, threads.value_or(m_usable_threads)).cost;
    }
 
-   auto print_sequence() -> void {
-      const std::size_t threads =
-           ((m_usable_threads == 0) ? m_length : m_usable_threads);
-
-      print_operations(m_length - 1, 0, {0, threads - 1});
+   auto get_sequence(const std::optional<std::size_t> threads = {})
+        -> Sequence {
+      Sequence seq {};
+      build_sequence(
+           m_length - 1, 0, {0, threads.value_or(m_usable_threads - 1)}, seq);
+      std::println("");
+      return seq;
    }
 
-   auto print_operations(
+   auto build_sequence(
         const std::size_t j, const std::size_t i,
-        const std::pair<std::size_t, std::size_t> thread_pool) -> void {
+        const std::pair<std::size_t, std::size_t> thread_pool, Sequence& seq,
+        std::size_t start_time = 0) -> std::size_t {
 
       const std::size_t t = thread_pool.second - thread_pool.first + 1;
       DPNode& fma_ji = node(j, i, t);
       assert(fma_ji.visited);
 
-      switch (fma_ji.op) {
-         case Operation::ACCUMULATION: {
-            std::print(
-                 "ACC {} ({} {})\t", to_string(fma_ji.mode), j, i,
-                 thread_pool.first);
+      switch (fma_ji.op.action) {
+         case Action::ACCUMULATION: {
+            fma_ji.op.thread = thread_pool.first;
+            fma_ji.op.start_time = std::max(
+                 seq.makespan(fma_ji.op.thread), start_time);
          } break;
-         case Operation::MULTIPLICATION: {
+
+         case Action::MULTIPLICATION: {
             std::pair<std::size_t, std::size_t> thread_pool_jk = thread_pool;
             std::pair<std::size_t, std::size_t> thread_pool_ki = thread_pool;
             if (fma_ji.thread_split > 0) {
                thread_pool_ki.first = thread_pool.first + fma_ji.thread_split;
                thread_pool_jk.second = thread_pool_ki.first - 1;
             }
-            print_operations(j, fma_ji.position_split + 1, thread_pool_jk);
-            print_operations(fma_ji.position_split, i, thread_pool_ki);
+            const std::size_t jk_end_time = build_sequence(
+                 j, fma_ji.op.k + 1, thread_pool_jk, seq, start_time);
 
-            std::print(
-                 "ELI MUL ({} {}) ({} {})", j, fma_ji.position_split + 1,
-                 fma_ji.position_split, i);
-         } break;
-         case Operation::ELIMINATION: {
-            if (fma_ji.mode == Mode::TANGENT) {
-               print_operations(fma_ji.position_split, i, thread_pool);
-            } else if (fma_ji.mode == Mode::ADJOINT) {
-               print_operations(j, fma_ji.position_split + 1, thread_pool);
+            // fma_ji.thread_split == 0 means we perform fma_jk and fma_ki in
+            // serial. Therefore update the start time for fma_ki. This can lead
+            // to a suboptimal schdule and we should reschedule the sequence
+            // with branch & bound as a post-processing step!
+            if (fma_ji.thread_split == 0) {
+               start_time = jk_end_time;
             }
 
-            std::print(
-                 "ELI {} ({} {} {})\t", to_string(fma_ji.mode), j,
-                 fma_ji.position_split, i);
+            const std::size_t ki_end_time = build_sequence(
+                 fma_ji.op.k, i, thread_pool_ki, seq, start_time);
+
+            if (jk_end_time >= ki_end_time) {
+               fma_ji.op.thread = thread_pool_jk.first;
+               fma_ji.op.start_time = jk_end_time;
+            } else {
+               fma_ji.op.thread = thread_pool_ki.first;
+               fma_ji.op.start_time = ki_end_time;
+            }
          } break;
-         case Operation::NONE: {
+
+         case Action::ELIMINATION: {
+            std::size_t end_time;
+            if (fma_ji.op.mode == Mode::TANGENT) {
+               end_time = build_sequence(
+                    fma_ji.op.k, i, thread_pool, seq, start_time);
+            } else {
+               end_time = build_sequence(
+                    j, fma_ji.op.k + 1, thread_pool, seq, start_time);
+            }
+
+            fma_ji.op.thread = thread_pool.first;
+            fma_ji.op.start_time = end_time;
+         } break;
+
+         case Action::NONE: {
             assert(false);
          } break;
       }
 
-      if (thread_pool.first == thread_pool.second) {
-         std::print("\t[{}]", thread_pool.first);
-      } else {
-         std::print("\t[{}-{}]", thread_pool.first, thread_pool.second);
-      }
-
-      std::println("\t{}", fma_ji.op_cost);
+      seq += fma_ji.op;
+      return seq.back().start_time + seq.back().fma;
    }
 
-
  private:
-   std::size_t m_length {0};
-   bool m_matrix_free {false};
-   bool m_banded {false};
-   bool m_sparse {false};
-   std::size_t m_available_memory {0};
-   std::size_t m_available_threads {0};
-   std::size_t m_usable_threads {0};
-   JacobianChain* m_chain {nullptr};
-
    std::vector<DPNode> m_dptable;
 
    auto node(const std::size_t j, const std::size_t i, const std::size_t t)
         -> DPNode& {
       assert(j < m_length);
       assert(i < m_length && i <= j);
+      assert(t <= m_usable_threads);
 
       std::size_t idx = j * (j + 1) / 2 + i;
       if (m_usable_threads > 0 && j != i) {
-         assert(t >= 1);
-         assert(t <= m_usable_threads);
-
          idx += (t - 1) * (m_length + 1) * (m_length) / 2;
 
          // Correct for preaccumulation nodes which only ever use one thread
@@ -208,23 +197,26 @@ class DPSolver : public Properties {
 
    template<Mode mode>
    auto try_accumulation(const std::size_t j) -> void {
+      std::size_t fma;
       if constexpr (mode == Mode::ADJOINT) {
          if (m_available_memory > 0) {
-            const std::size_t mem = m_chain->subchain_memory_requirement(j, j);
+            const std::size_t mem = m_chain->get_jacobian(j, j).edges_in_dag;
             if (mem > m_available_memory) {
                return;
             }
          }
       }
 
-      std::size_t cost = m_chain->subchain_fma<mode>(j, j, j);
+      fma = m_chain->get_jacobian(j, j).fma<mode>();
       DPNode& fma_ji = node(j, j, 1);
-      if (cost < fma_ji.cost) {
-         fma_ji.op = Operation::ACCUMULATION;
-         fma_ji.mode = mode;
-         fma_ji.op_cost = cost;
-         fma_ji.cost = cost;
-         fma_ji.position_split = j;
+      if (fma < fma_ji.cost) {
+         fma_ji.op.action = Action::ACCUMULATION;
+         fma_ji.op.mode = mode;
+         fma_ji.op.fma = fma;
+         fma_ji.op.i = j;
+         fma_ji.op.j = j;
+         fma_ji.op.k = j;
+         fma_ji.cost = fma;
          fma_ji.thread_split = 0;
          fma_ji.visited = true;
       }
@@ -269,18 +261,20 @@ class DPSolver : public Properties {
       }
 
       // Dense
-      const std::size_t op_cost = m_chain->jacobians[j].m *
-                                  m_chain->jacobians[k].m *
-                                  m_chain->jacobians[i].n;
-      cost += op_cost;
+      const std::size_t fma = m_chain->elemental_jacobians[j].m *
+                              m_chain->elemental_jacobians[k].m *
+                              m_chain->elemental_jacobians[i].n;
+      cost += fma;
 
       DPNode& fma_ji = node(j, i, t);
       if (cost < fma_ji.cost) {
-         fma_ji.op = Operation::MULTIPLICATION;
-         fma_ji.mode = Mode::NONE;
-         fma_ji.op_cost = op_cost;
+         fma_ji.op.action = Action::MULTIPLICATION;
+         fma_ji.op.mode = Mode::NONE;
+         fma_ji.op.fma = fma;
+         fma_ji.op.i = i;
+         fma_ji.op.j = j;
+         fma_ji.op.k = k;
          fma_ji.cost = cost;
-         fma_ji.position_split = k;
          fma_ji.thread_split = thread_split;
          fma_ji.visited = true;
       }
@@ -292,44 +286,49 @@ class DPSolver : public Properties {
         const std::size_t t) -> void {
 
       std::size_t cost;
-      std::size_t op_cost;
+      std::size_t fma;
       if constexpr (mode == Mode::ADJOINT) {
          if (m_available_memory > 0) {
-            const std::size_t mem = m_chain->subchain_memory_requirement(k, i);
+            const std::size_t mem = m_chain->get_jacobian(k, i).edges_in_dag;
             if (mem > m_available_memory) {
                return;
             }
          }
 
-         op_cost = m_chain->subchain_fma<mode>(k, i, j);
-
          const DPNode& fma_jk = node(j, k + 1, t);
          assert(fma_jk.visited);
-         cost = fma_jk.cost + op_cost;
-      } else {
-         op_cost = m_chain->subchain_fma<mode>(j, k + 1, i);
 
+         fma = m_chain->get_jacobian(k, i).fma<mode>(
+              m_chain->elemental_jacobians[j].m);
+         cost = fma_jk.cost + fma;
+      } else {
          const DPNode& fma_ki = node(k, i, t);
          assert(fma_ki.visited);
-         cost = fma_ki.cost + op_cost;
+
+         fma = m_chain->get_jacobian(j, k + 1).fma<mode>(
+              m_chain->elemental_jacobians[i].n);
+         cost = fma_ki.cost + fma;
       }
 
       DPNode& fma_ji = node(j, i, t);
       if (cost < fma_ji.cost) {
-         fma_ji.op = Operation::ELIMINATION;
-         fma_ji.mode = mode;
-         fma_ji.op_cost = op_cost;
+         fma_ji.op.action = Action::ELIMINATION;
+         fma_ji.op.mode = mode;
+         fma_ji.op.fma = fma;
+         fma_ji.op.i = i;
+         fma_ji.op.j = j;
+         fma_ji.op.k = k;
          fma_ji.cost = cost;
-         fma_ji.position_split = k;
          fma_ji.thread_split = 1;
+         fma_ji.visited = true;
       }
    }
 };
 
-}  // end namespace jcdp
+}  // namespace jcdp::optimizer
 
 // >>>>>>>>>>>>>>>> INCLUDE TEMPLATE AND INLINE DEFINITIONS <<<<<<<<<<<<<<<<< //
 
 // #include "util/impl/jacobian.inl"  // IWYU pragma: export
 
-#endif  // JCDP_DP_SOLVER_HPP_
+#endif  // JCDP_OPTIMIZERS_DYNAMIC_PROGRAMMING_HPP_

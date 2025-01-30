@@ -1,15 +1,14 @@
-#include <iostream>
 #include <filesystem>
+#include <iostream>
 
-#include "jcdp/dp_solver.hpp"
 #include "jcdp/generator.hpp"
-#include "jcdp/jacobian_chain.hpp"
 #include "jcdp/graphml.hpp"
-
+#include "jcdp/jacobian_chain.hpp"
+#include "jcdp/optimizer/dynamic_programming.hpp"
 
 int main(int argc, char* argv[]) {
    jcdp::JacobianChainGenerator jcgen;
-   jcdp::DPSolver solver;
+   jcdp::optimizer::DynamicProgrammingOptimizer solver;
 
    if (argc < 2) {
       jcgen.print_help(std::cout);
@@ -27,7 +26,7 @@ int main(int argc, char* argv[]) {
       return -1;
    }
 
-   std::filesystem::path output_dir;
+   std::filesystem::path output_dir = ".";
    if (argc > 2) {
       output_dir = std::filesystem::path(argv[2]);
    }
@@ -36,7 +35,7 @@ int main(int argc, char* argv[]) {
    while (jcgen.next(chain)) {
       solver.init(chain);
       solver.solve();
-      jcdp::write_graphml_for_all_solutions(output_dir, chain);
+      jcdp::write_graphml(output_dir, chain);
    }
 
    return 0;

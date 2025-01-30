@@ -137,7 +137,7 @@ def main():
     headers_1 = os.path.join(repository_root, 'include/jcdp', '*.hpp')
     headers_2 = os.path.join(repository_root, 'include/jcdp', '*.inl')
     headers_3 = os.path.join(repository_root, 'include/jcdp', '*', '*.hpp')
-    headers_3 = os.path.join(repository_root, 'include/jcdp', '*', '*.inl')
+    headers_4 = os.path.join(repository_root, 'include/jcdp', '*', '*.inl')
     opts.args = [src_files, headers_1, headers_2, headers_3]
 
   # Check amount of jobs

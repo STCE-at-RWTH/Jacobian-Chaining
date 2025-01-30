@@ -113,7 +113,8 @@ class PropertyInfo : public PropertyInfoBase<T> {
 };
 
 template<typename T1, typename T2>
-class PropertyInfo<std::pair<T1, T2>> : public PropertyInfoBase<std::pair<T1, T2>> {
+class PropertyInfo<std::pair<T1, T2>>
+   : public PropertyInfoBase<std::pair<T1, T2>> {
  public:
    using PropertyInfoBase<std::pair<T1, T2>>::PropertyInfoBase;
 
@@ -168,7 +169,9 @@ class Properties {
    ~Properties();
 
    //! Parses a config file from a std::ifstream.
-   auto parse_config(const std::filesystem::path& config_filename, bool skip_not_registered_keys = false) -> void;
+   auto parse_config(
+        const std::filesystem::path& config_filename,
+        bool skip_not_registered_keys = false) -> void;
 
    //! Prints the keys and descriptions of all registeres properties in a
    //! structured way.
@@ -179,7 +182,9 @@ class Properties {
  private:
    //! Finds the propertiy which is registered under key and pipes value
    //! into it. Also executes the associated _on_read.
-   auto put(const std::string& key, std::ifstream& in, bool skip_not_registered_keys) -> void;
+   auto put(
+        const std::string& key, std::ifstream& in,
+        bool skip_not_registered_keys) -> void;
 
    //! Contains pointers to all registered properties.
    std::list<BasicPropertyInfo*> m_info;

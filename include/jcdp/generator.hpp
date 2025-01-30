@@ -61,17 +61,17 @@ class JacobianChainGenerator : public Properties {
          return false;
       }
 
-      chain.jacobians.clear();
-      chain.jacobians.reserve(m_chain_lengths[length_idx]);
-      chain.jacobians.push_back(generate_random_jacobian());
-      chain.jacobians[0].i = 0;
-      chain.jacobians[0].j = 1;
+      chain.elemental_jacobians.clear();
+      chain.elemental_jacobians.reserve(m_chain_lengths[length_idx]);
+      chain.elemental_jacobians.push_back(generate_random_jacobian());
+      chain.elemental_jacobians[0].i = 0;
+      chain.elemental_jacobians[0].j = 1;
 
       for (std::size_t i = 1; i < m_chain_lengths[length_idx]; ++i) {
-         chain.jacobians.push_back(
-              generate_random_jacobian(chain.jacobians[i - 1].m));
-         chain.jacobians[i].i = i;
-         chain.jacobians[i].j = i + 1;
+         chain.elemental_jacobians.push_back(
+              generate_random_jacobian(chain.elemental_jacobians[i - 1].m));
+         chain.elemental_jacobians[i].i = i;
+         chain.elemental_jacobians[i].j = i + 1;
       }
 
       chain.id = batch_idx;
@@ -137,8 +137,10 @@ class JacobianChainGenerator : public Properties {
            (max_mn - jac.m * jac.n) * m_density_distribution(m_gen)));
 
       jac.edges_in_dag = m_dag_size_distribution(m_gen);
-      jac.tangent_factor = m_tangent_factor_distribution(m_gen);
-      jac.adjoint_factor = m_adjoint_factor_distribution(m_gen);
+      jac.tangent_cost = jac.edges_in_dag *
+                         m_tangent_factor_distribution(m_gen);
+      jac.adjoint_cost = jac.edges_in_dag *
+                         m_adjoint_factor_distribution(m_gen);
 
       return jac;
    }

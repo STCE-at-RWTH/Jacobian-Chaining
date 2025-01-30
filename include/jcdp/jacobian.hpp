@@ -32,28 +32,21 @@ struct Jacobian {
 
    //! Amount of edges in the DAG of the primal function (~ size of tape).
    std::size_t edges_in_dag {0};
-   //! Runtime factor of a single tangent evaluation (y^(1) = F' * x^(1)).
-   double tangent_factor {1};
-   //! Runtime factor of a single adjoint evaluation (x_(1) = y_(1) * F').
-   double adjoint_factor {1};
+   //! Cost of a single tangent evaluation (y^(1) = F' * x^(1)).
+   std::size_t tangent_cost {0};
+   //! Cost of a single adjoint evaluation (x_(1) = y_(1) * F').
+   std::size_t adjoint_cost {0};
 
-   //! Generate a random Jacobian matrix.
-   template<class Generator, class IntDistribution, class RealDistribution>
-   inline static auto generate_random(
-        Generator& gen, IntDistribution& size_distribution,
-        IntDistribution& dag_size_distribution,
-        RealDistribution& tangent_factor_distribution,
-        RealDistribution& adjoint_factor_distribution,
-        RealDistribution& density_distribution,
-        const std::optional<std::size_t> n = {}) -> Jacobian;
-
+   //! Whether the Jacobian is already accumulated or not.
+   bool is_accumulated {false};
 
    template<Mode mode>
-   inline auto single_evaluation_fma() const -> std::size_t {
+   inline auto fma(const std::optional<std::size_t> evals = {}) const
+        -> std::size_t {
       if constexpr (mode == Mode::ADJOINT) {
-         return static_cast<std::size_t>(edges_in_dag * adjoint_factor);
+         return evals.value_or(m) * adjoint_cost;
       } else {
-         return static_cast<std::size_t>(edges_in_dag * tangent_factor);
+         return evals.value_or(n) * tangent_cost;
       }
    }
 };
