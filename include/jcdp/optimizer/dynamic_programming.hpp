@@ -28,7 +28,7 @@ class DynamicProgrammingOptimizer : public Optimizer {
  public:
    DynamicProgrammingOptimizer() = default;
 
-   virtual auto init(JacobianChain& chain) -> void override final {
+   virtual auto init(const JacobianChain& chain) -> void override final {
       Optimizer::init(chain);
 
       std::size_t dp_nodes = m_length * (m_length + 1) / 2;
@@ -43,7 +43,7 @@ class DynamicProgrammingOptimizer : public Optimizer {
       m_dptable.resize(dp_nodes);
    }
 
-   virtual auto solve() -> void override final {
+   virtual auto solve() -> Sequence override final {
       const std::ptrdiff_t j_max = static_cast<std::ptrdiff_t>(m_length);
 
       // Accumulation costs
@@ -82,18 +82,7 @@ class DynamicProgrammingOptimizer : public Optimizer {
          }
       } while (++threads <= m_usable_threads);
 
-      if (m_usable_threads > 0) {
-         for (threads = 1; threads <= m_usable_threads; ++threads) {
-            m_chain->optimized_costs[threads] = get_solution(threads);
-         }
-      } else {
-         m_chain->optimized_costs[0] = get_solution();
-      }
-   }
-
-   auto get_solution(const std::optional<std::size_t> threads = {})
-        -> std::size_t {
-      return node(m_length - 1, 0, threads.value_or(m_usable_threads)).cost;
+      return get_sequence();
    }
 
    auto get_sequence(const std::optional<std::size_t> threads = {})
@@ -181,10 +170,10 @@ class DynamicProgrammingOptimizer : public Optimizer {
         -> DPNode& {
       assert(j < m_length);
       assert(i < m_length && i <= j);
-      assert(t <= m_usable_threads);
 
       std::size_t idx = j * (j + 1) / 2 + i;
       if (m_usable_threads > 0 && j != i) {
+         assert(t <= m_usable_threads);
          idx += (t - 1) * (m_length + 1) * (m_length) / 2;
 
          // Correct for preaccumulation nodes which only ever use one thread
@@ -200,14 +189,14 @@ class DynamicProgrammingOptimizer : public Optimizer {
       std::size_t fma;
       if constexpr (mode == Mode::ADJOINT) {
          if (m_available_memory > 0) {
-            const std::size_t mem = m_chain->get_jacobian(j, j).edges_in_dag;
+            const std::size_t mem = m_chain.get_jacobian(j, j).edges_in_dag;
             if (mem > m_available_memory) {
                return;
             }
          }
       }
 
-      fma = m_chain->get_jacobian(j, j).fma<mode>();
+      fma = m_chain.get_jacobian(j, j).fma<mode>();
       DPNode& fma_ji = node(j, j, 1);
       if (fma < fma_ji.cost) {
          fma_ji.op.action = Action::ACCUMULATION;
@@ -261,9 +250,9 @@ class DynamicProgrammingOptimizer : public Optimizer {
       }
 
       // Dense
-      const std::size_t fma = m_chain->elemental_jacobians[j].m *
-                              m_chain->elemental_jacobians[k].m *
-                              m_chain->elemental_jacobians[i].n;
+      const std::size_t fma = m_chain.elemental_jacobians[j].m *
+                              m_chain.elemental_jacobians[k].m *
+                              m_chain.elemental_jacobians[i].n;
       cost += fma;
 
       DPNode& fma_ji = node(j, i, t);
@@ -289,7 +278,7 @@ class DynamicProgrammingOptimizer : public Optimizer {
       std::size_t fma;
       if constexpr (mode == Mode::ADJOINT) {
          if (m_available_memory > 0) {
-            const std::size_t mem = m_chain->get_jacobian(k, i).edges_in_dag;
+            const std::size_t mem = m_chain.get_jacobian(k, i).edges_in_dag;
             if (mem > m_available_memory) {
                return;
             }
@@ -298,15 +287,15 @@ class DynamicProgrammingOptimizer : public Optimizer {
          const DPNode& fma_jk = node(j, k + 1, t);
          assert(fma_jk.visited);
 
-         fma = m_chain->get_jacobian(k, i).fma<mode>(
-              m_chain->elemental_jacobians[j].m);
+         fma = m_chain.get_jacobian(k, i).fma<mode>(
+              m_chain.elemental_jacobians[j].m);
          cost = fma_jk.cost + fma;
       } else {
          const DPNode& fma_ki = node(k, i, t);
          assert(fma_ki.visited);
 
-         fma = m_chain->get_jacobian(j, k + 1).fma<mode>(
-              m_chain->elemental_jacobians[i].n);
+         fma = m_chain.get_jacobian(j, k + 1).fma<mode>(
+              m_chain.elemental_jacobians[i].n);
          cost = fma_ki.cost + fma;
       }
 

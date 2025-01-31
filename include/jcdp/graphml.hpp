@@ -93,19 +93,21 @@ inline auto write_edge(std::ofstream& file, const Jacobian& jac) -> void {
    file << "    </edge>\n";
 }
 
-inline auto write_optimized_costs(
-     std::ofstream& file, const JacobianChain& chain) -> void {
+inline auto write_optimized_costs(std::ofstream&, const JacobianChain&)
+     -> void {
 
-   constexpr std::string_view data_str {
-        "    <data key=\"fma_upper_bound_{}\">{}</data>\n"};
-   if (chain.optimized_costs.size() > 1) {
-      for (std::size_t threads = 1; threads < chain.optimized_costs.size();
-           ++threads) {
-         file << std::format(data_str, threads, chain.optimized_costs[threads]);
-      }
-   } else {
-      file << std::format(data_str, chain.length(), chain.optimized_costs[0]);
-   }
+   // constexpr std::string_view data_str {
+   //      "    <data key=\"fma_upper_bound_{}\">{}</data>\n"};
+   // if (chain.optimized_costs.size() > 1) {
+   //    for (std::size_t threads = 1; threads < chain.optimized_costs.size();
+   //         ++threads) {
+   //       file << std::format(data_str, threads,
+   //       chain.optimized_costs[threads]);
+   //    }
+   // } else {
+   //    file << std::format(data_str, chain.length(),
+   //    chain.optimized_costs[0]);
+   // }
 }
 
 }  // end namespace graphml

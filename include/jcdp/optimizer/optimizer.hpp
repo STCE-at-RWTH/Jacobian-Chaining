@@ -10,6 +10,7 @@
 
 #include "jcdp/jacobian_chain.hpp"
 #include "jcdp/operation.hpp"
+#include "jcdp/sequence.hpp"
 #include "jcdp/util/properties.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
@@ -37,16 +38,17 @@ class Optimizer : public Properties {
            "jacobian chain.");
    }
 
-   virtual auto init(JacobianChain& chain) -> void {
+   virtual auto init(const JacobianChain& chain) -> void {
       m_length = chain.length();
       m_usable_threads = std::min(m_available_threads, m_length);
 
-      m_chain = &chain;
-      m_chain->optimized_costs.clear();
-      m_chain->optimized_costs.resize(1 + m_usable_threads);
+      m_chain = chain;
+      m_chain.optimized_costs.clear();
+      m_chain.optimized_costs.resize(1 + m_usable_threads);
+      // m_chain.init_subchains();
    }
 
-   virtual auto solve() -> void = 0;
+   virtual auto solve() -> Sequence = 0;
 
  protected:
    std::size_t m_length {0};
@@ -56,7 +58,8 @@ class Optimizer : public Properties {
    std::size_t m_available_memory {0};
    std::size_t m_available_threads {0};
    std::size_t m_usable_threads {0};
-   JacobianChain* m_chain {nullptr};
+
+   JacobianChain m_chain;
 };
 
 }  // end namespace jcdp::optimizer
