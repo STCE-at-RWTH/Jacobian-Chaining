@@ -56,8 +56,4 @@ struct Jacobian {
 
 }  // end namespace jcdp
 
-// >>>>>>>>>>>>>>>> INCLUDE TEMPLATE AND INLINE DEFINITIONS <<<<<<<<<<<<<<<<< //
-
-// #include "jcdp/jacobian.inl"  // IWYU pragma: export
-
 #endif  // JCDP_JACOBIAN_HPP_

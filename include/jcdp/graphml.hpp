@@ -141,8 +141,4 @@ inline auto write_graphml(
 
 }  // end namespace jcdp
 
-// >>>>>>>>>>>>>>>> INCLUDE TEMPLATE AND INLINE DEFINITIONS <<<<<<<<<<<<<<<<< //
-
-// #include "jcdp/jacobian.inl"  // IWYU pragma: export
-
-#endif  // JCDP_JACOBIAN_HPP_
+#endif  // JCDP_GRAHPML_HPP_

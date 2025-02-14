@@ -180,7 +180,7 @@ class Properties {
    auto print_values(std::ostream& o) -> void;
 
  private:
-   //! Finds the propertiy which is registered under key and pipes value
+   //! Finds the property which is registered under key and pipes value
    //! into it. Also executes the associated _on_read.
    auto put(
         const std::string& key, std::ifstream& in,

@@ -145,8 +145,4 @@ class JacobianChainGenerator : public Properties {
 
 }  // end namespace jcdp
 
-// >>>>>>>>>>>>>>>> INCLUDE TEMPLATE AND INLINE DEFINITIONS <<<<<<<<<<<<<<<<< //
-
-#include "jcdp/jacobian.inl"  // IWYU pragma: export
-
 #endif  // JCDP_GENERATOR_HPP_

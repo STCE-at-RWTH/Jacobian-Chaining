@@ -277,8 +277,4 @@ class BranchAndBoundOptimizer : public Optimizer {
 
 }  // namespace jcdp::optimizer
 
-// >>>>>>>>>>>>>>>> INCLUDE TEMPLATE AND INLINE DEFINITIONS <<<<<<<<<<<<<<<<< //
-
-// #include "util/impl/jacobian.inl"  // IWYU pragma: export
-
 #endif  // JCDP_OPTIMIZER_BRANCH_AND_BOUND_HPP_

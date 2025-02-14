@@ -321,8 +321,4 @@ class DynamicProgrammingOptimizer : public Optimizer {
 
 }  // namespace jcdp::optimizer
 
-// >>>>>>>>>>>>>>>> INCLUDE TEMPLATE AND INLINE DEFINITIONS <<<<<<<<<<<<<<<<< //
-
-// #include "util/impl/jacobian.inl"  // IWYU pragma: export
-
 #endif  // JCDP_OPTIMIZER_DYNAMIC_PROGRAMMING_HPP_

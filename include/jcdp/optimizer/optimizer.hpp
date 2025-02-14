@@ -71,8 +71,4 @@ class Optimizer : public Properties {
 
 }  // end namespace jcdp::optimizer
 
-// >>>>>>>>>>>>>>>> INCLUDE TEMPLATE AND INLINE DEFINITIONS <<<<<<<<<<<<<<<<< //
-
-// #include "util/impl/jacobian.inl"  // IWYU pragma: export
-
 #endif  // JCDP_OPTIMIZER_OPTIMIZER_HPP_

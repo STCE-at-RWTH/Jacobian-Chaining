@@ -82,8 +82,4 @@ class PriorityListScheduler : public Scheduler {
 
 }  // namespace jcdp::scheduler
 
-// >>>>>>>>>>>>>>>> INCLUDE TEMPLATE AND INLINE DEFINITIONS <<<<<<<<<<<<<<<<< //
-
-// #include "util/impl/jacobian.inl"  // IWYU pragma: export
-
 #endif  // JCDP_SCHEDULER_PRIORITY_LIST_HPP_

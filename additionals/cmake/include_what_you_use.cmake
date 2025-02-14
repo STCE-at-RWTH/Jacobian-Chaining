@@ -11,10 +11,10 @@ include(util/print)
 include(cxx_standard_library)
 
 # Enable IWYU option
-option(INCLUDE_WHAT_YOU_USE "Enable include-what-you-use checks." OFF)
+option(JCDP_INCLUDE_WHAT_YOU_USE "Enable include-what-you-use checks." OFF)
 
 # Check IWYU options
-if(INCLUDE_WHAT_YOU_USE)
+if(JCDP_INCLUDE_WHAT_YOU_USE)
   find_package(iwyu REQUIRED)
 
   # Check if compiler is clang
@@ -49,13 +49,13 @@ function(check_everything_with_iwyu)
   endforeach()
 
   # Enable IWYU globally
-  if(INCLUDE_WHAT_YOU_USE AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+  if(JCDP_INCLUDE_WHAT_YOU_USE AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     _print_status("IWYU: Enabling include-what-you-use for all targets")
 
     get_property(_enabled_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
     foreach(_language "C" "CXX")
       if(${_language} IN_LIST _enabled_languages)
-        set(CMAKE_${_language}_INCLUDE_WHAT_YOU_USE
+        set(CMAKE_${_language}_JCDP_INCLUDE_WHAT_YOU_USE
           ${IWYU_EXECUTABLE} ${_flags} PARENT_SCOPE)
       endif()
     endforeach()
@@ -82,12 +82,12 @@ function(check_with_iwyu tgt_name)
   endforeach()
 
   # Enable IWYU for the given target
-  if(INCLUDE_WHAT_YOU_USE AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+  if(JCDP_INCLUDE_WHAT_YOU_USE AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     get_property(_enabled_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
     foreach(_language "C" "CXX")
       if(${_language} IN_LIST _enabled_languages)
         set_property(TARGET ${tgt_name}
-          PROPERTY ${_language}_INCLUDE_WHAT_YOU_USE
+          PROPERTY ${_language}_JCDP_INCLUDE_WHAT_YOU_USE
           ${IWYU_EXECUTABLE} ${_flags})
       endif()
     endforeach()
@@ -105,7 +105,7 @@ function(header_only_iwyu_targets tgt_name)
     "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
   # Enable IWYU for given headers
-  if(INCLUDE_WHAT_YOU_USE AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+  if(JCDP_INCLUDE_WHAT_YOU_USE AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     # Collect flags
     set(_flags ${_ARG_COMPILER_FLAGS})
     foreach(_incdir ${_ARG_INCLUDE_DIRS})

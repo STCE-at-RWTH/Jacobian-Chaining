@@ -126,8 +126,4 @@ class BranchAndBoundScheduler : public Scheduler {
 
 }  // namespace jcdp::scheduler
 
-// >>>>>>>>>>>>>>>> INCLUDE TEMPLATE AND INLINE DEFINITIONS <<<<<<<<<<<<<<<<< //
-
-// #include "util/impl/jacobian.inl"  // IWYU pragma: export
-
 #endif  // JCDP_SCHEDULER_BRANCH_AND_BOUND_HPP_

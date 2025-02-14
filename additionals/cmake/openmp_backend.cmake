@@ -34,10 +34,15 @@ if(JCDP_OPENMP_RUNTIME)
   endif()
 endif()
 
+# Use llvm libomp with msvc for OpenMP tasks
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  set(OpenMP_RUNTIME_MSVC llvm)
+endif()
+
 # Find OpenMP
 find_package(OpenMP COMPONENTS CXX REQUIRED)
 
-# Override OpenMP_CX_LIBRARIES and set OpenMP_CX_LIBRARY_DIR if necessary
+# Override OpenMP_CXX_LIBRARIES and set OpenMP_CXX_LIBRARY_DIR if necessary
 if(JCDP_OPENMP_RUNTIME)
   set(OpenMP_CXX_LIBRARIES ${_omp_lib})
   set(OpenMP_CXX_LIBRARY_DIR ${_omp_lib_dir})

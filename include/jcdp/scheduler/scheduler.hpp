@@ -42,8 +42,4 @@ class Scheduler {
 
 }  // namespace jcdp::scheduler
 
-// >>>>>>>>>>>>>>>> INCLUDE TEMPLATE AND INLINE DEFINITIONS <<<<<<<<<<<<<<<<< //
-
-// #include "util/impl/jacobian.inl"  // IWYU pragma: export
-
 #endif  // JCDP_SCHEDULER_SCHEDULER_HPP_

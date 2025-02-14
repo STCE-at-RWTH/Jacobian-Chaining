@@ -168,8 +168,4 @@ struct JacobianChain {
 
 }  // end namespace jcdp
 
-// >>>>>>>>>>>>>>>> INCLUDE TEMPLATE AND INLINE DEFINITIONS <<<<<<<<<<<<<<<<< //
-
-// #include "util/impl/jacobian.inl"  // IWYU pragma: export
-
 #endif  // JCDP_JACOBIAN_CHAIN_HPP_
