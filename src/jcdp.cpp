@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "jcdp/generator.hpp"
-#include "jcdp/graphml.hpp"
 #include "jcdp/jacobian_chain.hpp"
 #include "jcdp/operation.hpp"
 #include "jcdp/optimizer/branch_and_bound.hpp"
@@ -114,8 +113,6 @@ int main(int argc, char* argv[]) {
       bnb_solver.print_stats();
       std::println("Optimized cost (BnB): {}\n", bnb_seq.makespan());
       std::println("{}", bnb_seq);
-
-      jcdp::write_graphml(output_dir, chain);
    }
 
    return 0;

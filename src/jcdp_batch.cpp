@@ -2,7 +2,6 @@
 #include <iostream>
 
 #include "jcdp/generator.hpp"
-#include "jcdp/graphml.hpp"
 #include "jcdp/jacobian_chain.hpp"
 #include "jcdp/optimizer/dynamic_programming.hpp"
 #include "jcdp/scheduler/branch_and_bound.hpp"
@@ -37,7 +36,6 @@ int main(int argc, char* argv[]) {
       solver.init(
            chain, std::make_shared<jcdp::scheduler::BranchAndBoundScheduler>());
       solver.solve();
-      jcdp::write_graphml(output_dir, chain);
    }
 
    return 0;
