@@ -7,6 +7,8 @@
 
 #include <cstddef>
 #include <print>
+#include <vector>
+#include <utility>
 
 #include "jcdp/jacobian.hpp"
 #include "jcdp/jacobian_chain.hpp"
@@ -19,16 +21,23 @@
 namespace jcdp::optimizer {
 
 class BranchAndBoundOptimizer : public Optimizer {
+
+   using OpPair = std::array<std::optional<Operation>, 2>;
+
  public:
    virtual auto solve() -> Sequence override final {
 
       std::size_t accs = m_matrix_free ? 0 : (m_length - 1);
+      m_leafs = 0;
+      m_updated_makespan = 0;
+      m_pruned_branches.clear();
+      m_pruned_branches.resize(m_chain.longest_possible_sequence() + 1);
 
       #pragma omp parallel default(shared)
-      #pragma omp master
+      #pragma omp single
       while (++accs <= m_length) {
          Sequence sequence {};
-         std::vector<Operation> eliminations {};
+         std::vector<OpPair> eliminations {};
          JacobianChain chain = m_chain;
          add_accumulation(sequence, chain, accs, eliminations);
       }
@@ -40,13 +49,22 @@ class BranchAndBoundOptimizer : public Optimizer {
       m_makespan = upper_bound + 1;
    }
 
+   inline auto print_stats() -> void {
+      std::println(
+           "Number of leafs: {}\nUpdated makespan: {}\nPruned branches: {}",
+           m_leafs, m_updated_makespan, m_pruned_branches);
+   }
+
  private:
    Sequence m_optimal_sequence {Sequence::make_max()};
    std::size_t m_makespan {m_optimal_sequence.makespan()};
+   std::size_t m_leafs {0};
+   std::vector<std::size_t> m_pruned_branches {};
+   std::size_t m_updated_makespan {0};
 
    inline auto add_accumulation(
-        Sequence& sequence, JacobianChain& chain, const std::size_t accs,
-        std::vector<Operation>& eliminations, std::size_t j = 0) -> void {
+        Sequence sequence, JacobianChain chain, const std::size_t accs,
+        std::vector<OpPair> eliminations, std::size_t j = 0) -> void {
       if (accs > 0) {
          for (; j < m_chain.length(); ++j) {
             const Operation op = cheapest_accumulation(j);
@@ -54,64 +72,94 @@ class BranchAndBoundOptimizer : public Optimizer {
                continue;
             }
 
+            push_possible_eliminations(chain, eliminations, op.j, op.i);
             sequence.push_back(std::move(op));
-            const std::size_t new_eliminations = push_possible_eliminations(
-                 chain, eliminations, op.j, op.i);
 
             add_accumulation(sequence, chain, accs - 1, eliminations, j + 1);
 
-            pop_possible_eliminations(eliminations, new_eliminations);
             sequence.pop_back();
+            eliminations.pop_back();
             chain.revert(op);
          }
       } else {
-         #pragma omp task default(none)                                        \
+         #pragma omp task default(shared)                                      \
                           firstprivate(sequence, chain, eliminations)
-         add_elimination(sequence, chain, eliminations);
+         {
+            add_elimination(sequence, chain, eliminations);
+         }
       }
    }
 
    inline auto add_elimination(
-        Sequence& sequence, JacobianChain& chain,
-        std::vector<Operation>& eliminations, std::size_t elim_idx = 0)
+        Sequence &sequence, JacobianChain &chain,
+        std::vector<OpPair> &eliminations, std::size_t elim_idx = 0)
         -> void {
 
       // Check if we accumulated the entire jacobian
       if (chain.get_jacobian(chain.length() - 1, 0).is_accumulated) {
-         assert(elim_idx == eliminations.size());
-         const std::size_t new_makespan = m_scheduler->schedule(
-              sequence, m_usable_threads, m_makespan);
+         assert(elim_idx == eliminations.size() - 1);
+         assert(!eliminations[elim_idx][0].has_value());
+         assert(!eliminations[elim_idx][1].has_value());
 
-         #pragma omp critical
-         if (m_makespan > new_makespan) {
-            m_optimal_sequence = sequence;
-            m_makespan = new_makespan;
+         Sequence final_sequence = sequence;
+
+         // Start new task for the scheduling of the final sequence. If
+         // branch & bound is used, this can take some time.
+         #pragma omp task default(shared) firstprivate(final_sequence) untied
+         {
+            const std::size_t new_makespan = m_scheduler->schedule(
+               final_sequence, m_usable_threads, m_makespan);
+
+            #pragma omp atomic
+            m_leafs++;
+
+            #pragma omp critical
+            if (m_makespan > new_makespan) {
+               m_optimal_sequence = final_sequence;
+               m_makespan = new_makespan;
+               m_updated_makespan++;
+            }
          }
          return;
       } else {
-         // const std::size_t new_makespan = m_scheduler->schedule(
+         bool prune = (sequence.critical_path() >= m_makespan);
+         // if (!prune) {
+         //    const std::size_t new_makespan = m_scheduler->schedule(
          //      sequence, m_usable_threads, m_makespan);
 
-         if (sequence.critical_path() >= m_makespan) {
+         //    prune = (new_makespan>= m_makespan);
+         // }
+
+         if (prune) {
+            std::size_t &prune_counter = m_pruned_branches[sequence.length()];
+
+            #pragma omp atomic
+            prune_counter++;
+
             return;
          }
       }
 
       for (; elim_idx < eliminations.size(); ++elim_idx) {
-         const Operation& op = eliminations[elim_idx];
-         if (!chain.apply(op)) {
-            continue;
+         for (std::size_t pair_idx = 0; pair_idx <= 1; ++pair_idx) {
+            if (!eliminations[elim_idx][pair_idx].has_value()) {
+               continue;
+            }
+
+            const Operation op = eliminations[elim_idx][pair_idx].value();
+            if (!chain.apply(op)) {
+               continue;
+            }
+
+            push_possible_eliminations(chain, eliminations, op.j, op.i);
+            sequence.push_back(op);
+
+            add_elimination(sequence, chain, eliminations, elim_idx + 1);
+
+            sequence.pop_back();
+            eliminations.pop_back();
+            chain.revert(op);
          }
-
-         sequence.push_back(op);
-         const std::size_t new_eliminations = push_possible_eliminations(
-              chain, eliminations, op.j, op.i);
-
-         add_elimination(sequence, chain, eliminations, elim_idx + 1);
-
-         pop_possible_eliminations(eliminations, new_eliminations);
-         sequence.pop_back();
-         chain.revert(eliminations[elim_idx]);
       }
    }
 
@@ -120,10 +168,10 @@ class BranchAndBoundOptimizer : public Optimizer {
       const Jacobian& jac = m_chain.get_jacobian(j, j);
       Operation op {
            .action = Action::ACCUMULATION,
-           .i = j,
+           .mode = Mode::TANGENT,
            .j = j,
            .k = j,
-           .mode = Mode::TANGENT,
+           .i = j,
            .fma = jac.fma<Mode::TANGENT>()};
 
       if (m_available_memory == 0 || m_available_memory >= jac.edges_in_dag) {
@@ -138,10 +186,10 @@ class BranchAndBoundOptimizer : public Optimizer {
    }
 
    inline auto push_possible_eliminations(
-        const JacobianChain& chain, std::vector<Operation>& eliminations,
-        const std::size_t op_j, const std::size_t op_i) -> std::size_t {
+        const JacobianChain& chain, std::vector<OpPair>& eliminations,
+        const std::size_t op_j, const std::size_t op_i) -> void {
 
-      size_t new_eliminations = 0;
+      OpPair ops{};
 
       // Tangent or multiplication
       if (op_j < chain.length() - 1) {
@@ -153,35 +201,32 @@ class BranchAndBoundOptimizer : public Optimizer {
          std::size_t j;
          for (j = m_chain.length() - 1; j >= k + 1; --j) {
             const Jacobian& jk_jac = chain.get_jacobian(j, k + 1);
-            if (!jk_jac.is_accumulated) {
+            if (!jk_jac.is_accumulated || jk_jac.is_used) {
                continue;
             }
 
-            eliminations.push_back(Operation {
+            ops[0] = Operation {
                  .action = Action::MULTIPLICATION,
-                 .i = i,
                  .j = j,
                  .k = k,
-                 .fma = jk_jac.m * ki_jac.m * ki_jac.n});
+                 .i = i,
+                 .fma = jk_jac.m * ki_jac.m * ki_jac.n};
 
-            new_eliminations++;
             break;
          }
 
          // Add tangent elimination if multiplication wasn't possible
-         if (k + 1 > j++ && m_matrix_free) {
+         if (k + 1 == ++j && m_matrix_free) {
             const Jacobian& jk_jac = chain.get_jacobian(j, k + 1);
-            assert(!jk_jac.is_accumulated);
+            assert(!jk_jac.is_accumulated && !jk_jac.is_used);
 
-            eliminations.push_back(Operation {
+            ops[0] = Operation {
                  .action = Action::ELIMINATION,
                  .mode = Mode::TANGENT,
-                 .i = i,
                  .j = j,
                  .k = k,
-                 .fma = jk_jac.fma<Mode::TANGENT>(ki_jac.n)});
-
-            new_eliminations++;
+                 .i = i,
+                 .fma = jk_jac.fma<Mode::TANGENT>(ki_jac.n)};
          }
       }
 
@@ -195,50 +240,38 @@ class BranchAndBoundOptimizer : public Optimizer {
          std::size_t i;
          for (i = 0; i <= k; ++i) {
             const Jacobian& ki_jac = chain.get_jacobian(k, i);
-            if (!ki_jac.is_accumulated) {
+            if (!ki_jac.is_accumulated || ki_jac.is_used) {
                continue;
             }
 
-            eliminations.push_back(Operation {
+            ops[1] = Operation {
                  .action = Action::MULTIPLICATION,
-                 .i = i,
                  .j = j,
                  .k = k,
-                 .fma = jk_jac.m * ki_jac.m * ki_jac.n});
-
-            new_eliminations++;
+                 .i = i,
+                 .fma = jk_jac.m * ki_jac.m * ki_jac.n};
             break;
          }
 
          // Add adjoint elimination if multiplication wasn't possible
-         if (k < i-- && m_matrix_free) {
+         if (k == --i && m_matrix_free) {
             const Jacobian& ki_jac = chain.get_jacobian(k, i);
-            assert(!ki_jac.is_accumulated);
+            assert(!ki_jac.is_accumulated && !ki_jac.is_used);
 
             if (m_available_memory == 0 ||
                 m_available_memory >= ki_jac.edges_in_dag) {
-               eliminations.push_back(Operation {
+               ops[1] = Operation {
                     .action = Action::ELIMINATION,
                     .mode = Mode::ADJOINT,
-                    .i = i,
                     .j = j,
                     .k = k,
-                    .fma = ki_jac.fma<Mode::ADJOINT>(jk_jac.m)});
-
-               new_eliminations++;
+                    .i = i,
+                    .fma = ki_jac.fma<Mode::ADJOINT>(jk_jac.m)};
             }
          }
       }
 
-      return new_eliminations;
-   }
-
-   inline auto pop_possible_eliminations(
-        std::vector<Operation>& eliminations, std::size_t amount) -> void {
-
-      for (; amount-- > 0;) {
-         eliminations.pop_back();
-      }
+      eliminations.push_back(ops);
    }
 };
 

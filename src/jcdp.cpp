@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
    dp_solver.print_values(std::cout);
 
    jcdp::JacobianChain chain;
-   if (jcgen.next(chain)) {
+   while (jcgen.next(chain)) {
       chain.init_subchains();
 
       std::println(
@@ -91,24 +91,27 @@ int main(int argc, char* argv[]) {
       // Solve via branch & bound + List scheduling
       bnb_solver.init(
            chain, std::make_shared<jcdp::scheduler::PriorityListScheduler>(list_scheduler));
-      // bnb_solver.set_upper_bound(dp_seq.makespan());
+      bnb_solver.set_upper_bound(dp_seq.makespan());
       auto start_bnb_list = std::chrono::high_resolution_clock::now();
       jcdp::Sequence bnb_seq_list = bnb_solver.solve();
       auto end_bnb_list = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double> duration_bnb_list = end_bnb_list - start_bnb_list;
       std::println("\nBnB (List) solve duration: {} seconds", duration_bnb_list.count());
+      bnb_solver.print_stats();
       std::println("Optimized cost (BnB + List scheduling): {}\n", bnb_seq_list.makespan());
       std::println("{}", bnb_seq_list);
+
 
       // Solve via branch & bound
       bnb_solver.init(
            chain, std::make_shared<jcdp::scheduler::BranchAndBoundScheduler>(bnb_scheduler));
-      // bnb_solver.set_upper_bound(dp_seq.makespan());
+      // bnb_solver.set_upper_bound(bnb_seq_list.makespan());
       auto start_bnb = std::chrono::high_resolution_clock::now();
       jcdp::Sequence bnb_seq = bnb_solver.solve();
       auto end_bnb = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double> duration_bnb = end_bnb - start_bnb;
       std::println("\nBnB solve duration: {} seconds", duration_bnb.count());
+      bnb_solver.print_stats();
       std::println("Optimized cost (BnB): {}\n", bnb_seq.makespan());
       std::println("{}", bnb_seq);
 

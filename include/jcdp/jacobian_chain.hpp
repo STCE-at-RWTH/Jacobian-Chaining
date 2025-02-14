@@ -3,6 +3,7 @@
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <vector>
@@ -50,41 +51,44 @@ struct JacobianChain {
    }
 
    inline auto apply(const Operation& op) -> bool {
-      bool& ij_is_acc = get_jacobian(op.j, op.i).is_accumulated;
-      if (ij_is_acc) {
+      Jacobian& ij_jac = get_jacobian(op.j, op.i);
+      if (ij_jac.is_accumulated) {
          return false;
       }
 
       if (op.action != Action::ACCUMULATION) {
-         bool& jk_is_acc = get_jacobian(op.j, op.k + 1).is_accumulated;
-         bool& ki_is_acc = get_jacobian(op.k, op.i).is_accumulated;
+         Jacobian& jk_jac = get_jacobian(op.j, op.k + 1);
+         Jacobian& ki_jac = get_jacobian(op.k, op.i);
 
          switch (op.mode) {
             case Mode::TANGENT: {
-               if (!ki_is_acc || jk_is_acc) {
+               if (!ki_jac.is_accumulated || ki_jac.is_used || jk_jac.is_accumulated) {
                   return false;
                }
-               ki_is_acc = false;
+               jk_jac.is_accumulated = true;
+               ki_jac.is_used = true;
             } break;
 
             case Mode::ADJOINT: {
-               if (!jk_is_acc || ki_is_acc) {
+               if (!jk_jac.is_accumulated || jk_jac.is_used || ki_jac.is_accumulated) {
                   return false;
                }
-               jk_is_acc = false;
+               ki_jac.is_accumulated = true;
+               jk_jac.is_used = true;
             } break;
 
             case Mode::NONE: {
-               if (!jk_is_acc || !ki_is_acc) {
+               if (!jk_jac.is_accumulated || jk_jac.is_used ||
+                   !ki_jac.is_accumulated || ki_jac.is_used) {
                   return false;
                }
-               ki_is_acc = false;
-               jk_is_acc = false;
+               jk_jac.is_used = true;
+               ki_jac.is_used = true;
             } break;
          }
       }
 
-      ij_is_acc = true;
+      ij_jac.is_accumulated = true;
       return true;
    }
 
@@ -94,18 +98,42 @@ struct JacobianChain {
       ij_jac.is_accumulated = false;
 
       if (op.action != Action::ACCUMULATION) {
-         if (op.mode != Mode::TANGENT) {
-            Jacobian& jk_jac = get_jacobian(op.j, op.k + 1);
-            assert(!jk_jac.is_accumulated);
-            jk_jac.is_accumulated = true;
+         Jacobian& jk_jac = get_jacobian(op.j, op.k + 1);
+         Jacobian& ki_jac = get_jacobian(op.k, op.i);
+
+         if (op.mode == Mode::TANGENT) {
+            jk_jac.is_accumulated = false;
+         } else {
+            jk_jac.is_used = false;
          }
 
-         if (op.mode != Mode::ADJOINT) {
-            Jacobian& ki_jac = get_jacobian(op.k, op.i);
-            assert(!ki_jac.is_accumulated);
-            ki_jac.is_accumulated = true;
+         if (op.mode == Mode::ADJOINT) {
+            ki_jac.is_accumulated = false;
+         } else {
+            ki_jac.is_used = false;
          }
       }
+   }
+
+   inline auto accumulated_jacobians() const -> std::size_t {
+      return std::count_if(
+           elemental_jacobians.cbegin(), elemental_jacobians.cend(),
+           [](const Jacobian &jac) -> bool {
+                  return jac.is_accumulated;
+              });
+   }
+
+   inline auto longest_possible_sequence() const -> std::size_t {
+      std::size_t len = elemental_jacobians.size();
+      std::size_t remaining = len;
+
+      while (remaining > 0) {
+         len += remaining % 2;
+         remaining /= 2;
+         len += remaining;
+      }
+
+      return len;
    }
 
  private:

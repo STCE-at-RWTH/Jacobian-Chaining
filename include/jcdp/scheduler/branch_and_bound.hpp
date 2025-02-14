@@ -37,7 +37,13 @@ class BranchAndBoundScheduler : public Scheduler {
          op.is_scheduled = false;
       }
 
-      auto schedule_op = [&](auto& schedule_next_op) -> void {
+      const std::size_t lower_bound = working_copy.critical_path();
+
+      if (lower_bound >= upper_bound) {
+         return lower_bound;
+      }
+
+      auto schedule_op = [&](auto& schedule_next_op) -> bool {
          bool everything_scheduled = true;
 
          for (std::size_t op_idx = 0; op_idx < sequence.length(); ++op_idx) {
@@ -75,14 +81,17 @@ class BranchAndBoundScheduler : public Scheduler {
                const std::size_t old_makespan = makespan;
                makespan = std::max(makespan, thread_loads[t]);
 
-               const std::size_t lb =
-                    ((idling_time + sequential_makespan) / usable_threads);
+               const std::size_t lb = std::max(
+                    ((idling_time + sequential_makespan) / usable_threads),
+                     working_copy.critical_path());
 
                if (std::max(lb, makespan) < best_makespan) {
                   working_copy[op_idx].thread = t;
 
-                  // Perform branching
-                  schedule_next_op(schedule_next_op);
+                  // Perform branching and exit if lower bound is reached
+                  if (schedule_next_op(schedule_next_op)) {
+                     return true;
+                  };
                }
 
                thread_loads[t] = old_thread_load;
@@ -93,14 +102,21 @@ class BranchAndBoundScheduler : public Scheduler {
             working_copy[op_idx].is_scheduled = false;
          }
 
-         if (everything_scheduled && makespan < best_makespan) {
-            best_makespan = makespan;
-            for (size_t i = 0; i < sequence.length(); ++i) {
-               sequence[i].thread = working_copy[i].thread;
-               sequence[i].start_time = working_copy[i].start_time;
-               sequence[i].is_scheduled = true;
+         if (everything_scheduled) {
+            if (makespan < best_makespan) {
+               best_makespan = makespan;
+               for (size_t i = 0; i < sequence.length(); ++i) {
+                  sequence[i].thread = working_copy[i].thread;
+                  sequence[i].start_time = working_copy[i].start_time;
+                  sequence[i].is_scheduled = true;
+               }
+               if (best_makespan <= lower_bound) {
+                  return true;
+               }
             }
          }
+
+         return false;
       };
 
       schedule_op(schedule_op);

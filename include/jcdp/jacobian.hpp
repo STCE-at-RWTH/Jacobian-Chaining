@@ -40,6 +40,9 @@ struct Jacobian {
    //! Whether the Jacobian is already accumulated or not.
    bool is_accumulated {false};
 
+   //! Whether the Jacobian is already used in an elimination.
+   bool is_used {false};
+
    template<Mode mode>
    inline auto fma(const std::optional<std::size_t> evals = {}) const
         -> std::size_t {

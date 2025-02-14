@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <format>
 #include <string_view>
+#include <array>
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 

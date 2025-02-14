@@ -7,6 +7,8 @@
 #include <limits>
 #include <numeric>
 #include <optional>
+#include <deque>
+#include <vector>
 
 #include "jcdp/operation.hpp"
 
@@ -36,7 +38,7 @@ class Sequence : public std::deque<Operation> {
 
    inline auto sequential_makespan() -> std::size_t {
       return std::reduce(
-           cbegin(), cend(), 0,
+           cbegin(), cend(), static_cast<std::size_t>(0),
            [](const std::size_t cost, const Operation& op) -> std::size_t {
               return cost + op.fma;
            });
@@ -87,13 +89,15 @@ class Sequence : public std::deque<Operation> {
       return makespan;
    }
 
-   inline auto critical_path(const std::size_t op_idx) const -> std::size_t {
+   inline auto critical_path(const std::size_t op_idx, std::size_t start_time = 0) const -> std::size_t {
 
+      start_time = std::max(start_time, at(op_idx).start_time);
+      const std::size_t end_time = start_time + at(op_idx).fma;
       std::optional<std::size_t> p = parent(op_idx);
       if (p.has_value()) {
-         return critical_path(p.value()) + at(op_idx).fma;
+         return critical_path(p.value(), end_time);
       }
-      return at(op_idx).fma;
+      return end_time;
    }
 
    inline auto is_schedulable(const std::size_t op_idx) const -> bool {
@@ -109,11 +113,20 @@ class Sequence : public std::deque<Operation> {
            });
    }
 
+   inline auto is_scheduled() const -> bool {
+
+      return std::all_of(
+           cbegin(), cend(),
+           [](const Operation& op) -> bool {
+              return op.is_scheduled;
+           });
+   }
+
    inline auto earliest_start(const std::size_t op_idx) const
         -> std::size_t {
 
       return std::reduce(
-           cbegin(), cend(), 0,
+           cbegin(), cend(), static_cast<std::size_t>(0),
            [this, op_idx](
                 const std::size_t start, const Operation& op) -> std::size_t {
               if (at(op_idx) < op) {
