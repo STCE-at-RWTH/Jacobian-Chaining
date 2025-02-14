@@ -5,12 +5,10 @@
 
 #include <cassert>
 #include <cstddef>
-#include <optional>
 #include <vector>
 
 #include "jcdp/jacobian.hpp"
 #include "jcdp/operation.hpp"
-#include "jcdp/sequence.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
@@ -63,14 +61,14 @@ struct JacobianChain {
 
          switch (op.mode) {
             case Mode::TANGENT: {
-               if (!ki_is_acc) {
+               if (!ki_is_acc || jk_is_acc) {
                   return false;
                }
                ki_is_acc = false;
             } break;
 
             case Mode::ADJOINT: {
-               if (!jk_is_acc) {
+               if (!jk_is_acc || ki_is_acc) {
                   return false;
                }
                jk_is_acc = false;

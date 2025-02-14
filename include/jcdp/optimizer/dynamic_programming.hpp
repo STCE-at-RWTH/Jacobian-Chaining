@@ -1,5 +1,5 @@
-#ifndef JCDP_OPTIMIZERS_DYNAMIC_PROGRAMMING_HPP_
-#define JCDP_OPTIMIZERS_DYNAMIC_PROGRAMMING_HPP_
+#ifndef JCDP_OPTIMIZER_DYNAMIC_PROGRAMMING_HPP_
+#define JCDP_OPTIMIZER_DYNAMIC_PROGRAMMING_HPP_
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
@@ -28,8 +28,12 @@ class DynamicProgrammingOptimizer : public Optimizer {
  public:
    DynamicProgrammingOptimizer() = default;
 
-   virtual auto init(const JacobianChain& chain) -> void override final {
-      Optimizer::init(chain);
+   virtual auto init(
+        const JacobianChain& chain,
+        const std::shared_ptr<scheduler::Scheduler>& sched)
+        -> void override final {
+
+      Optimizer::init(chain, sched);
 
       std::size_t dp_nodes = m_length * (m_length + 1) / 2;
       if (m_usable_threads > 0) {
@@ -159,6 +163,7 @@ class DynamicProgrammingOptimizer : public Optimizer {
          } break;
       }
 
+      fma_ji.op.is_scheduled = true;
       seq += fma_ji.op;
       return seq.back().start_time + seq.back().fma;
    }
@@ -320,4 +325,4 @@ class DynamicProgrammingOptimizer : public Optimizer {
 
 // #include "util/impl/jacobian.inl"  // IWYU pragma: export
 
-#endif  // JCDP_OPTIMIZERS_DYNAMIC_PROGRAMMING_HPP_
+#endif  // JCDP_OPTIMIZER_DYNAMIC_PROGRAMMING_HPP_

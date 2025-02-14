@@ -4,12 +4,12 @@
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 #include <cstddef>
-#include <limits>
+#include <memory>
 #include <print>
 #include <vector>
 
 #include "jcdp/jacobian_chain.hpp"
-#include "jcdp/operation.hpp"
+#include "jcdp/scheduler/scheduler.hpp"
 #include "jcdp/sequence.hpp"
 #include "jcdp/util/properties.hpp"
 
@@ -38,17 +38,24 @@ class Optimizer : public Properties {
            "jacobian chain.");
    }
 
-   virtual auto init(const JacobianChain& chain) -> void {
+   virtual ~Optimizer() = default;
+
+   virtual auto init(
+        const JacobianChain& chain,
+        const std::shared_ptr<scheduler::Scheduler>& sched) -> void {
       m_length = chain.length();
       m_usable_threads = std::min(m_available_threads, m_length);
 
       m_chain = chain;
       m_chain.optimized_costs.clear();
       m_chain.optimized_costs.resize(1 + m_usable_threads);
-      // m_chain.init_subchains();
+
+      m_scheduler = sched;
    }
 
    virtual auto solve() -> Sequence = 0;
+
+   std::size_t m_usable_threads {0};
 
  protected:
    std::size_t m_length {0};
@@ -57,9 +64,9 @@ class Optimizer : public Properties {
    bool m_sparse {false};
    std::size_t m_available_memory {0};
    std::size_t m_available_threads {0};
-   std::size_t m_usable_threads {0};
 
    JacobianChain m_chain;
+   std::shared_ptr<scheduler::Scheduler> m_scheduler;
 };
 
 }  // end namespace jcdp::optimizer

@@ -1,15 +1,15 @@
 #ifndef JCDP_OPERATION_HPP_
 #define JCDP_OPERATION_HPP_
 
-// >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 #include <cassert>
 #include <compare>
 #include <cstdint>
 #include <format>
-#include <sstream>
-#include <string>
 #include <string_view>
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 namespace jcdp {
 
@@ -33,6 +33,7 @@ struct Operation {
    std::size_t fma {0};
    std::size_t thread {0};
    std::size_t start_time {0};
+   bool is_scheduled {false};
 };
 
 inline auto operator<=>(const Operation& lhs, const Operation& rhs)

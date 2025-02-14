@@ -1,15 +1,12 @@
-#ifndef JCDP_OPTIMIZERS_DP_HPP_
-#define JCDP_OPTIMIZERS_DP_HPP_
+#ifndef JCDP_OPTIMIZER_BRANCH_AND_BOUND_HPP_
+#define JCDP_OPTIMIZER_BRANCH_AND_BOUND_HPP_
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 #include <omp.h>
 
 #include <cstddef>
-#include <iterator>
-#include <list>
 #include <print>
-#include <ranges>
 
 #include "jcdp/jacobian.hpp"
 #include "jcdp/jacobian_chain.hpp"
@@ -68,7 +65,8 @@ class BranchAndBoundOptimizer : public Optimizer {
             chain.revert(op);
          }
       } else {
-         #pragma omp task default(none) firstprivate(sequence, chain, eliminations)
+         #pragma omp task default(none)                                        \
+                          firstprivate(sequence, chain, eliminations)
          add_elimination(sequence, chain, eliminations);
       }
    }
@@ -78,14 +76,11 @@ class BranchAndBoundOptimizer : public Optimizer {
         std::vector<Operation>& eliminations, std::size_t elim_idx = 0)
         -> void {
 
-      const std::size_t new_makespan = schedule_sequence(sequence);
-      if (new_makespan > m_makespan) {
-         return;
-      }
-
       // Check if we accumulated the entire jacobian
       if (chain.get_jacobian(chain.length() - 1, 0).is_accumulated) {
          assert(elim_idx == eliminations.size());
+         const std::size_t new_makespan = m_scheduler->schedule(
+              sequence, m_usable_threads, m_makespan);
 
          #pragma omp critical
          if (m_makespan > new_makespan) {
@@ -93,6 +88,13 @@ class BranchAndBoundOptimizer : public Optimizer {
             m_makespan = new_makespan;
          }
          return;
+      } else {
+         // const std::size_t new_makespan = m_scheduler->schedule(
+         //      sequence, m_usable_threads, m_makespan);
+
+         if (sequence.critical_path() >= m_makespan) {
+            return;
+         }
       }
 
       for (; elim_idx < eliminations.size(); ++elim_idx) {
@@ -213,14 +215,15 @@ class BranchAndBoundOptimizer : public Optimizer {
             const Jacobian& ki_jac = chain.get_jacobian(k, i);
             assert(!ki_jac.is_accumulated);
 
-            if (m_available_memory == 0 || m_available_memory >= ki_jac.edges_in_dag) {
+            if (m_available_memory == 0 ||
+                m_available_memory >= ki_jac.edges_in_dag) {
                eliminations.push_back(Operation {
-                  .action = Action::ELIMINATION,
-                  .mode = Mode::ADJOINT,
-                  .i = i,
-                  .j = j,
-                  .k = k,
-                  .fma = ki_jac.fma<Mode::ADJOINT>(jk_jac.m)});
+                    .action = Action::ELIMINATION,
+                    .mode = Mode::ADJOINT,
+                    .i = i,
+                    .j = j,
+                    .k = k,
+                    .fma = ki_jac.fma<Mode::ADJOINT>(jk_jac.m)});
 
                new_eliminations++;
             }
@@ -237,16 +240,6 @@ class BranchAndBoundOptimizer : public Optimizer {
          eliminations.pop_back();
       }
    }
-
-   inline auto schedule_sequence(Sequence& sequence) -> std::size_t {
-
-      for (std::size_t i = 1; i < sequence.size(); ++i) {
-         sequence[i].start_time = sequence[i - 1].start_time +
-                                  sequence[i - 1].fma;
-      }
-
-      return sequence.back().start_time + sequence.back().fma;
-   }
 };
 
 }  // namespace jcdp::optimizer
@@ -255,4 +248,4 @@ class BranchAndBoundOptimizer : public Optimizer {
 
 // #include "util/impl/jacobian.inl"  // IWYU pragma: export
 
-#endif  // JCDP_OPTIMIZERS_DP_HPP_
+#endif  // JCDP_OPTIMIZER_BRANCH_AND_BOUND_HPP_

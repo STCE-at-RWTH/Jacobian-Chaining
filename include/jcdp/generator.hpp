@@ -4,14 +4,11 @@
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 #include <cstddef>
-#include <format>
-#include <fstream>
 #include <optional>
 #include <random>
 
 #include "jcdp/jacobian.hpp"
 #include "jcdp/jacobian_chain.hpp"
-#include "jcdp/operation.hpp"
 #include "jcdp/util/properties.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
