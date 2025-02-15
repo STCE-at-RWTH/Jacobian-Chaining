@@ -13,12 +13,10 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <memory>
 #include <string>
 #include <vector>
 
 #include "jcdp/jacobian_chain.hpp"
-#include "jcdp/scheduler/scheduler.hpp"  // IWYU pragma: export
 #include "jcdp/util/properties.hpp"
 
 namespace jcdp {
@@ -52,17 +50,13 @@ class Optimizer : public Properties {
 
    virtual ~Optimizer() = default;
 
-   virtual auto init(
-        const JacobianChain& chain,
-        const std::shared_ptr<scheduler::Scheduler>& sched) -> void {
+   virtual auto init(const JacobianChain& chain) -> void {
       m_length = chain.length();
       m_usable_threads = std::min(m_available_threads, m_length);
 
       m_chain = chain;
       m_chain.optimized_costs.clear();
       m_chain.optimized_costs.resize(1 + m_usable_threads);
-
-      m_scheduler = sched;
    }
 
    virtual auto solve() -> Sequence = 0;
@@ -78,7 +72,6 @@ class Optimizer : public Properties {
    std::size_t m_available_threads {0};
 
    JacobianChain m_chain;
-   std::shared_ptr<scheduler::Scheduler> m_scheduler;
 };
 
 }  // end namespace jcdp::optimizer

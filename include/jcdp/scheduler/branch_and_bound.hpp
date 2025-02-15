@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <vector>
+#include <print>
 
 #include "jcdp/operation.hpp"
 #include "jcdp/scheduler/scheduler.hpp"
@@ -50,7 +51,6 @@ class BranchAndBoundScheduler : public Scheduler {
 
       auto schedule_op = [&](auto& schedule_next_op) -> bool {
          bool everything_scheduled = true;
-
          for (std::size_t op_idx = 0; op_idx < sequence.length(); ++op_idx) {
             if (working_copy[op_idx].is_scheduled) {
                continue;
@@ -74,6 +74,7 @@ class BranchAndBoundScheduler : public Scheduler {
                   tried_empty_processor = true;
                }
 
+               const std::size_t old_start_time = working_copy[op_idx].start_time;
                const std::size_t start_time = std::max(thread_loads[t], start);
                working_copy[op_idx].start_time = start_time;
 
@@ -89,19 +90,21 @@ class BranchAndBoundScheduler : public Scheduler {
                const std::size_t lb = std::max(
                     ((idling_time + sequential_makespan) / usable_threads),
                     working_copy.critical_path());
-
                if (std::max(lb, makespan) < best_makespan) {
                   working_copy[op_idx].thread = t;
+                  
 
                   // Perform branching and exit if lower bound is reached
                   if (schedule_next_op(schedule_next_op)) {
                      return true;
                   }
+
                }
 
                thread_loads[t] = old_thread_load;
                idling_time = old_idling_time;
                makespan = old_makespan;
+               working_copy[op_idx].start_time = old_start_time;
             }
 
             working_copy[op_idx].is_scheduled = false;

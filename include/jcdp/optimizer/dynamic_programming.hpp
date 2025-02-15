@@ -16,7 +16,6 @@
 #include <cassert>
 #include <cstddef>
 #include <limits>
-#include <memory>
 #include <optional>
 #include <print>
 #include <utility>
@@ -43,11 +42,8 @@ class DynamicProgrammingOptimizer : public Optimizer {
  public:
    DynamicProgrammingOptimizer() = default;
 
-   virtual auto init(
-        const JacobianChain& chain,
-        const std::shared_ptr<scheduler::Scheduler>& sched)
-        -> void override final {
-      Optimizer::init(chain, sched);
+   virtual auto init(const JacobianChain& chain) -> void override final {
+      Optimizer::init(chain);
 
       std::size_t dp_nodes = m_length * (m_length + 1) / 2;
       if (m_usable_threads > 0) {
@@ -57,6 +53,7 @@ class DynamicProgrammingOptimizer : public Optimizer {
          dp_nodes -= (m_usable_threads - 1) * m_length;
       }
 
+      std::println("Dynamic Programming nodes: {}", dp_nodes);
       m_dptable.clear();
       m_dptable.resize(dp_nodes);
    }
@@ -107,8 +104,7 @@ class DynamicProgrammingOptimizer : public Optimizer {
         -> Sequence {
       Sequence seq {};
       build_sequence(
-           m_length - 1, 0, {0, threads.value_or(m_usable_threads - 1)}, seq);
-      std::println("");
+           m_length - 1, 0, {0, threads.value_or(m_usable_threads) - 1}, seq);
       return seq;
    }
 
@@ -116,6 +112,7 @@ class DynamicProgrammingOptimizer : public Optimizer {
         const std::size_t j, const std::size_t i,
         const std::pair<std::size_t, std::size_t> thread_pool, Sequence& seq,
         std::size_t start_time = 0) -> std::size_t {
+
       const std::size_t t = thread_pool.second - thread_pool.first + 1;
       DPNode& fma_ji = node(j, i, t);
       assert(fma_ji.visited);
@@ -123,8 +120,12 @@ class DynamicProgrammingOptimizer : public Optimizer {
       switch (fma_ji.op.action) {
          case Action::ACCUMULATION: {
             fma_ji.op.thread = thread_pool.first;
-            fma_ji.op.start_time = std::max(
-                 seq.makespan(fma_ji.op.thread), start_time);
+            if (m_usable_threads > 0) {
+               fma_ji.op.start_time = std::max(
+                  seq.makespan(fma_ji.op.thread), start_time);
+            } else {
+               fma_ji.op.start_time = 0;
+            }
          } break;
 
          case Action::MULTIPLICATION: {

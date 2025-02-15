@@ -141,6 +141,14 @@ class Sequence : public std::deque<Operation> {
            });
    }
 
+   inline auto count_accumulations() const -> std::size_t {
+      return std::count_if(
+           cbegin(), cend(),
+           [](const Operation& op) -> bool {
+              return op.action == Action::ACCUMULATION;
+           });
+   }
+
    inline auto operator+(const Sequence& rhs) -> const Sequence {
       Sequence res = *this;
       res += rhs;

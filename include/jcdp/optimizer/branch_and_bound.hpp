@@ -25,6 +25,7 @@
 #include "jcdp/jacobian_chain.hpp"
 #include "jcdp/operation.hpp"
 #include "jcdp/optimizer/optimizer.hpp"
+#include "jcdp/scheduler/scheduler.hpp"
 #include "jcdp/sequence.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
@@ -35,12 +36,24 @@ class BranchAndBoundOptimizer : public Optimizer {
    using OpPair = std::array<std::optional<Operation>, 2>;
 
  public:
-   virtual auto solve() -> Sequence override final {
-      std::size_t accs = m_matrix_free ? 0 : (m_length - 1);
+   auto init(
+        const JacobianChain& chain,
+        const std::shared_ptr<scheduler::Scheduler>& sched) -> void {
+      Optimizer::init(chain);
+
+      m_scheduler = sched;
+      m_optimal_sequence = Sequence::make_max();
+      m_makespan = m_optimal_sequence.makespan();
+      m_upper_bound = m_makespan;
+
       m_leafs = 0;
       m_updated_makespan = 0;
       m_pruned_branches.clear();
       m_pruned_branches.resize(m_chain.longest_possible_sequence() + 1);
+   }
+
+   virtual auto solve() -> Sequence override final {
+      std::size_t accs = m_matrix_free ? 0 : (m_length - 1);
 
       #pragma omp parallel default(shared)
       #pragma omp single
@@ -79,6 +92,9 @@ class BranchAndBoundOptimizer : public Optimizer {
    std::size_t m_leafs {0};
    std::vector<std::size_t> m_pruned_branches {};
    std::size_t m_updated_makespan {0};
+   std::shared_ptr<scheduler::Scheduler> m_scheduler;
+
+   using Optimizer::init;
 
    inline auto add_accumulation(
         Sequence& sequence, JacobianChain& chain, const std::size_t accs,

@@ -13,8 +13,8 @@
 
 #include <cstddef>
 #include <limits>
+#include <print>
 
-#include "jcdp/operation.hpp"
 #include "jcdp/sequence.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
@@ -30,11 +30,9 @@ class Scheduler {
         Sequence& sequence, const std::size_t threads,
         const std::size_t upper_bound =
              std::numeric_limits<std::size_t>::max()) const -> std::size_t {
+
       // We can never use more threads than we have accumulations
-      std::size_t usable_threads = 0;
-      for (Operation& op : sequence) {
-         usable_threads += (op.action == Action::ACCUMULATION);
-      }
+      std::size_t usable_threads = sequence.count_accumulations();
       if (threads > 0 && threads < usable_threads) {
          usable_threads = threads;
       }
