@@ -3,12 +3,15 @@
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
-#include <omp.h>
-
+#include <array>
+#include <cassert>
 #include <cstddef>
+#include <memory>
+#include <numeric>
+#include <optional> 
 #include <print>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include "jcdp/jacobian.hpp"
 #include "jcdp/jacobian_chain.hpp"
@@ -46,28 +49,32 @@ class BranchAndBoundOptimizer : public Optimizer {
    }
 
    inline auto set_upper_bound(const std::size_t upper_bound) {
-      m_makespan = upper_bound + 1;
+      m_upper_bound = upper_bound;
    }
 
    inline auto print_stats() -> void {
-      std::println("Number of leafs: {}", m_leafs);
+      std::println("Leafs visited (= sequences scheduled): {}", m_leafs);
       std::println("Updated makespan: {}", m_updated_makespan);
+      std::println("Pruned branches: {}", std::reduce(m_pruned_branches.cbegin(), m_pruned_branches.cend()));
       std::println("Pruned branches per sequence length:");
+      std::print("[ ");
       for (const std::size_t pruned : m_pruned_branches) {
          std::print("{} ", pruned);
       }
+      std::println("]");
    }
 
  private:
    Sequence m_optimal_sequence {Sequence::make_max()};
    std::size_t m_makespan {m_optimal_sequence.makespan()};
+   std::size_t m_upper_bound {m_makespan};
    std::size_t m_leafs {0};
    std::vector<std::size_t> m_pruned_branches {};
    std::size_t m_updated_makespan {0};
 
    inline auto add_accumulation(
-        Sequence sequence, JacobianChain chain, const std::size_t accs,
-        std::vector<OpPair> eliminations, std::size_t j = 0) -> void {
+        Sequence &sequence, JacobianChain &chain, const std::size_t accs,
+        std::vector<OpPair> &eliminations, std::size_t j = 0) -> void {
       if (accs > 0) {
          for (; j < m_chain.length(); ++j) {
             const Operation op = cheapest_accumulation(j);
@@ -85,18 +92,20 @@ class BranchAndBoundOptimizer : public Optimizer {
             chain.revert(op);
          }
       } else {
-         #pragma omp task default(shared)                                      \
-                          firstprivate(sequence, chain, eliminations)
-         {
-            add_elimination(sequence, chain, eliminations);
-         }
+         // Copy for spawned task
+         Sequence task_sequence = sequence;
+         JacobianChain task_chain = chain;
+         std::vector<OpPair> task_eliminations = eliminations;
+
+         #pragma omp task default(none) firstprivate(task_sequence)            \
+                          firstprivate(task_chain, task_eliminations)
+         add_elimination(task_sequence, task_chain, task_eliminations);
       }
    }
 
    inline auto add_elimination(
-        Sequence &sequence, JacobianChain &chain,
-        std::vector<OpPair> &eliminations, std::size_t elim_idx = 0)
-        -> void {
+        Sequence& sequence, JacobianChain& chain,
+        std::vector<OpPair>& eliminations, std::size_t elim_idx = 0) -> void {
 
       // Check if we accumulated the entire jacobian
       if (chain.get_jacobian(chain.length() - 1, 0).is_accumulated) {
@@ -108,10 +117,10 @@ class BranchAndBoundOptimizer : public Optimizer {
 
          // Start new task for the scheduling of the final sequence. If
          // branch & bound is used, this can take some time.
-         #pragma omp task default(shared) firstprivate(final_sequence) untied
+         #pragma omp task default(shared) firstprivate(final_sequence)
          {
             const std::size_t new_makespan = m_scheduler->schedule(
-               final_sequence, m_usable_threads, m_makespan);
+                 final_sequence, m_usable_threads, m_makespan);
 
             #pragma omp atomic
             m_leafs++;
@@ -124,25 +133,20 @@ class BranchAndBoundOptimizer : public Optimizer {
             }
          }
          return;
-      } else {
-         bool prune = (sequence.critical_path() >= m_makespan);
-         // if (!prune) {
-         //    const std::size_t new_makespan = m_scheduler->schedule(
-         //      sequence, m_usable_threads, m_makespan);
-
-         //    prune = (new_makespan>= m_makespan);
-         // }
-
-         if (prune) {
-            std::size_t &prune_counter = m_pruned_branches[sequence.length()];
-
-            #pragma omp atomic
-            prune_counter++;
-
-            return;
-         }
       }
 
+      // Check critical path as lower bound
+      const std::size_t lower_bound = sequence.critical_path();
+      if (lower_bound >= m_makespan || lower_bound > m_upper_bound) {
+         std::size_t& prune_counter = m_pruned_branches[sequence.length()];
+
+         #pragma omp atomic
+         prune_counter++;
+
+         return;
+      }
+
+      // Perform all possible elimination from the current elim_idx
       for (; elim_idx < eliminations.size(); ++elim_idx) {
          for (std::size_t pair_idx = 0; pair_idx <= 1; ++pair_idx) {
             if (!eliminations[elim_idx][pair_idx].has_value()) {
@@ -192,7 +196,7 @@ class BranchAndBoundOptimizer : public Optimizer {
         const JacobianChain& chain, std::vector<OpPair>& eliminations,
         const std::size_t op_j, const std::size_t op_i) -> void {
 
-      OpPair ops{};
+      OpPair ops {};
 
       // Tangent or multiplication
       if (op_j < chain.length() - 1) {

@@ -3,11 +3,15 @@
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
-#include <fstream>
 #include <list>
+#include <filesystem>
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+namespace jcdp {
+   class Properties;  // IWYU pragma: keep
+}
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
@@ -31,8 +35,6 @@ class BadConfigFileError : public std::runtime_error {
    //! Constructor of BadConfigFileError.
    BadConfigFileError();
 };
-
-class Properties;
 
 /******************************************************************************
  * @brief Stores the key and a description of a property but no value.

@@ -1,18 +1,22 @@
 #ifndef JCDP_INCLUDE_UTIL_PROPERTIES_INL_
 #define JCDP_INCLUDE_UTIL_PROPERTIES_INL_
 
-// IWYU pragma: private; include "util/properties.hpp"
+// IWYU pragma: private, include "jcdp/util/properties.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 #include <cstddef>
 #include <fstream>
+#include <iostream>
 #include <list>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
+#include <utility>
+#include <filesystem>
 
-#include "jcdp/util/properties.hpp"
+#include "jcdp/util/properties.hpp"  // IWYU pragma: keep
 
 // >>>>>>>>>>>>>>>>>>>>>> TEMPLATE AND INLINE CONTENTS <<<<<<<<<<<<<<<<<<<<<< //
 

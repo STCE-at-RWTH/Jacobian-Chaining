@@ -3,9 +3,14 @@
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
+#include <algorithm>
 #include <cstddef>
 #include <optional>
 #include <random>
+#include <cmath>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "jcdp/jacobian.hpp"
 #include "jcdp/jacobian_chain.hpp"
@@ -134,10 +139,10 @@ class JacobianChainGenerator : public Properties {
            (max_mn - jac.m * jac.n) * m_density_distribution(m_gen)));
 
       jac.edges_in_dag = m_dag_size_distribution(m_gen);
-      jac.tangent_cost = static_cast<std::size_t>(std::round(
-           jac.edges_in_dag * m_tangent_factor_distribution(m_gen)));
-      jac.adjoint_cost = static_cast<std::size_t>(std::round(
-           jac.edges_in_dag * m_adjoint_factor_distribution(m_gen)));
+      jac.tangent_cost = static_cast<std::size_t>(
+           std::round(jac.edges_in_dag * m_tangent_factor_distribution(m_gen)));
+      jac.adjoint_cost = static_cast<std::size_t>(
+           std::round(jac.edges_in_dag * m_adjoint_factor_distribution(m_gen)));
 
       return jac;
    }

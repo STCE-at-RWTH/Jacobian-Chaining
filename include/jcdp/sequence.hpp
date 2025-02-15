@@ -12,12 +12,14 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <deque>  // IWYU pragma: export
 #include <functional>
 #include <limits>
 #include <numeric>
 #include <optional>
-#include <deque>
 #include <vector>
+#include <cassert>
+#include <format>
 
 #include "jcdp/operation.hpp"
 
@@ -50,7 +52,7 @@ class Sequence : public std::deque<Operation> {
            cbegin(), cend(), static_cast<std::size_t>(0), std::plus<>(),
            [](const Operation& op) -> std::size_t {
               return op.fma;
-         });
+           });
    }
 
    inline auto children(const std::size_t op_idx) const
@@ -98,7 +100,9 @@ class Sequence : public std::deque<Operation> {
       return makespan;
    }
 
-   inline auto critical_path(const std::size_t op_idx, std::size_t start_time = 0) const -> std::size_t {
+   inline auto critical_path(
+        const std::size_t op_idx, std::size_t start_time = 0) const
+        -> std::size_t {
 
       start_time = std::max(start_time, at(op_idx).start_time);
       const std::size_t end_time = start_time + at(op_idx).fma;
@@ -112,8 +116,7 @@ class Sequence : public std::deque<Operation> {
    inline auto is_schedulable(const std::size_t op_idx) const -> bool {
 
       return std::all_of(
-           cbegin(), cend(),
-           [this, op_idx](const Operation& op) -> bool {
+           cbegin(), cend(), [this, op_idx](const Operation& op) -> bool {
               if (at(op_idx) < op) {
                  return op.is_scheduled;
               }
@@ -124,26 +127,24 @@ class Sequence : public std::deque<Operation> {
 
    inline auto is_scheduled() const -> bool {
 
-      return std::all_of(
-           cbegin(), cend(),
-           [](const Operation& op) -> bool {
-              return op.is_scheduled;
-           });
+      return std::all_of(cbegin(), cend(), [](const Operation& op) -> bool {
+         return op.is_scheduled;
+      });
    }
 
-   inline auto earliest_start(const std::size_t op_idx) const
-        -> std::size_t {
+   inline auto earliest_start(const std::size_t op_idx) const -> std::size_t {
 
       return std::transform_reduce(
            cbegin(), cend(), static_cast<std::size_t>(0),
-           [](const std::size_t start, const std::size_t op_start) -> std::size_t {
-               return std::max(start, op_start);
-           }, [this, op_idx](const Operation& op) -> std::size_t {
-               if (at(op_idx) < op) {
-                  return op.start_time + op.fma;
-               }
-               return 0;
-            });
+           [](const std::size_t lhs, const std::size_t rhs) -> std::size_t {
+              return std::max(lhs, rhs);
+           },
+           [this, op_idx](const Operation& op) -> std::size_t {
+              if (at(op_idx) < op) {
+                 return op.start_time + op.fma;
+              }
+              return 0;
+           });
    }
 
    inline auto operator+(const Sequence& rhs) -> const Sequence {
@@ -153,7 +154,7 @@ class Sequence : public std::deque<Operation> {
    }
 
    inline auto operator+=(const Sequence& rhs) -> Sequence {
-      for (const Operation &op : rhs) {
+      for (const Operation& op : rhs) {
          push_back(op);
       }
       return *this;

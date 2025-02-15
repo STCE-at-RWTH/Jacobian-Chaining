@@ -3,11 +3,9 @@
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
-#include <omp.h>
-
 #include <algorithm>
 #include <cstddef>
-#include <print>
+#include <vector>
 
 #include "jcdp/operation.hpp"
 #include "jcdp/scheduler/scheduler.hpp"
@@ -83,7 +81,7 @@ class BranchAndBoundScheduler : public Scheduler {
 
                const std::size_t lb = std::max(
                     ((idling_time + sequential_makespan) / usable_threads),
-                     working_copy.critical_path());
+                    working_copy.critical_path());
 
                if (std::max(lb, makespan) < best_makespan) {
                   working_copy[op_idx].thread = t;

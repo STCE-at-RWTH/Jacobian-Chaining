@@ -3,15 +3,19 @@
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
-#include <print>
+#include <string>
 #include <vector>
 
 #include "jcdp/jacobian_chain.hpp"
-#include "jcdp/scheduler/scheduler.hpp"
-#include "jcdp/sequence.hpp"
+#include "jcdp/scheduler/scheduler.hpp"  // IWYU pragma: export
 #include "jcdp/util/properties.hpp"
+
+namespace jcdp {
+   class Sequence;
+}
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 

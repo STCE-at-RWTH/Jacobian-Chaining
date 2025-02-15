@@ -3,11 +3,17 @@
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
+#include <algorithm>
+#include <cassert>
 #include <cstddef>
+#include <memory>
+#include <optional>
 #include <limits>
+#include <utility> 
 #include <print>
 #include <vector>
 
+#include "jcdp/jacobian.hpp"
 #include "jcdp/jacobian_chain.hpp"
 #include "jcdp/operation.hpp"
 #include "jcdp/optimizer/optimizer.hpp"

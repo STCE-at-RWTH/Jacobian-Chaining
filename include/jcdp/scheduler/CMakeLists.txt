@@ -7,6 +7,7 @@ set(_local_headers
 # Setup header-only IWYU target
 header_only_iwyu_targets("jcdp_scheduler"
   HEADERS ${_local_headers}
+  COMPILER_FLAGS ${JCDP_IWYU_COMPILER_FLAGS}
   INCLUDE_DIRS ${JCDP_include_dirs}
   IWYU_FLAGS ${JCDP_IWYU_FLAGS})
 

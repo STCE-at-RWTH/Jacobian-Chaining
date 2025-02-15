@@ -10,12 +10,13 @@
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
+#include <array>
 #include <cassert>
-#include <compare>
+#include <compare>  // IWYU pragma: export
+#include <cstddef>
 #include <cstdint>
 #include <format>
 #include <string_view>
-#include <array>
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 

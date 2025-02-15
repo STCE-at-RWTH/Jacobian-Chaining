@@ -89,9 +89,8 @@ include(openmp_backend)
 set(JCDP_include_dirs "${PROJECT_SOURCE_DIR}/include")
 
 # Collect IWYU flags
-set(JCDP_IWYU_FLAGS
-  "--mapping_file=${JCDP_IWYU_DIR}/jcdp.imp"
-  "--quoted_includes_first" "--cxx17ns")
+set(JCDP_IWYU_FLAGS "--mapping_file=${JCDP_IWYU_DIR}/jcdp.imp" "--cxx17ns")
+set(JCDP_IWYU_COMPILER_FLAGS "--std=c++23")
 
 add_subdirectory(include)
 

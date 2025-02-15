@@ -160,9 +160,9 @@ function(header_only_iwyu_targets tgt_name)
 
     add_custom_target(${tgt_name}_iwyu)
     foreach(header ${_ARG_HEADERS})
-      get_filename_component(file_tgt_name ${header} NAME_WE)
-      get_filename_component(extension ${header} EXT)
-      set(file_tgt_name "${tgt_name}_${file_tgt_name}_${extension}_iwyu")
+      get_filename_component(file_tgt_name ${header} NAME)
+      string(REPLACE "." "_" file_tgt_name ${file_tgt_name})
+      set(file_tgt_name "${tgt_name}_${file_tgt_name}_iwyu")
 
       # Create custom IWYU target for each header file
       add_custom_target(${file_tgt_name}

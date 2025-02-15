@@ -3,13 +3,11 @@
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
-#include <omp.h>
-
 #include <algorithm>
 #include <cstddef>
-#include <print>
-#include <queue>
 #include <numeric>
+#include <queue>
+#include <utility>
 #include <vector>
 
 #include "jcdp/operation.hpp"
@@ -29,15 +27,17 @@ class PriorityListScheduler : public Scheduler {
       std::vector<std::size_t> queue_cont(sequence.length());
       std::iota(queue_cont.begin(), queue_cont.end(), 0);
 
-      std::priority_queue queue([&sequence](
-         const std::size_t& op_idx1, const std::size_t& op_idx2) -> bool {
-            const std::size_t level_1 = sequence.level(op_idx1);
-            const std::size_t level_2 = sequence.level(op_idx2);
-            if (level_1 == level_2) {
-               return sequence.at(op_idx1).fma < sequence.at(op_idx2).fma;
-            }
-            return sequence.level(op_idx1) < sequence.level(op_idx2);
-      }, std::move(queue_cont));
+      std::priority_queue queue(
+           [&sequence](const std::size_t& op_idx1, const std::size_t& op_idx2)
+                -> bool {
+              const std::size_t level_1 = sequence.level(op_idx1);
+              const std::size_t level_2 = sequence.level(op_idx2);
+              if (level_1 == level_2) {
+                 return sequence.at(op_idx1).fma < sequence.at(op_idx2).fma;
+              }
+              return sequence.level(op_idx1) < sequence.level(op_idx2);
+           },
+           std::move(queue_cont));
 
       // Reset potential previous schedule
       for (Operation& op : sequence) {
@@ -49,13 +49,14 @@ class PriorityListScheduler : public Scheduler {
          const std::size_t op_idx = queue.top();
          const std::size_t earliest_start = sequence.earliest_start(op_idx);
 
-         Operation & op = sequence[op_idx];
+         Operation& op = sequence[op_idx];
          op.thread = 0;
          op.start_time = std::max(thread_loads[0], earliest_start);
          std::size_t current_idle_time = op.start_time - thread_loads[0];
 
          for (size_t t = 1; t < usable_threads; t++) {
-            const std::size_t start_on_t = std::max(thread_loads[t], earliest_start);
+            const std::size_t start_on_t = std::max(
+                 thread_loads[t], earliest_start);
             const std::size_t idle_on_t = start_on_t - thread_loads[t];
 
             if (start_on_t < op.start_time) {

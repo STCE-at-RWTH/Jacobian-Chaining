@@ -62,7 +62,8 @@ struct JacobianChain {
 
          switch (op.mode) {
             case Mode::TANGENT: {
-               if (!ki_jac.is_accumulated || ki_jac.is_used || jk_jac.is_accumulated) {
+               if (!ki_jac.is_accumulated || ki_jac.is_used ||
+                   jk_jac.is_accumulated) {
                   return false;
                }
                jk_jac.is_accumulated = true;
@@ -70,7 +71,8 @@ struct JacobianChain {
             } break;
 
             case Mode::ADJOINT: {
-               if (!jk_jac.is_accumulated || jk_jac.is_used || ki_jac.is_accumulated) {
+               if (!jk_jac.is_accumulated || jk_jac.is_used ||
+                   ki_jac.is_accumulated) {
                   return false;
                }
                ki_jac.is_accumulated = true;
@@ -122,9 +124,9 @@ struct JacobianChain {
    inline auto accumulated_jacobians() const -> std::size_t {
       return std::count_if(
            elemental_jacobians.cbegin(), elemental_jacobians.cend(),
-           [](const Jacobian &jac) -> bool {
-                  return jac.is_accumulated;
-              });
+           [](const Jacobian& jac) -> bool {
+              return jac.is_accumulated;
+           });
    }
 
    inline auto longest_possible_sequence() const -> std::size_t {
