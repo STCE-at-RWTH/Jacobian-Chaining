@@ -9,9 +9,8 @@ set(_local_headers
 # Setup header-only IWYU target
 header_only_iwyu_targets("jcdp"
   HEADERS ${_local_headers}
-  COMPILER_FLAGS ${JCDP_IWYU_FLAGS}
   INCLUDE_DIRS ${JCDP_include_dirs}
-  IWYU_FLAGS ${ADBLAS_IWYU_FLAGS})
+  IWYU_FLAGS ${JCDP_IWYU_FLAGS})
 
 # Setup header-only Cpplint targets
 header_only_cpplint_targets("jcdp"

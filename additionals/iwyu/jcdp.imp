@@ -1,0 +1,12 @@
+[
+  { ref: iwyu.gcc.imp },
+
+  # Fix some bugs
+  { symbol: [ "std::stringstream", private, "<sstream>", public ] },
+  { symbol: [ "std::ifstream", private, "<fstream>", public ] },
+
+  # HACK: iwyu suggests <ext/alloc_traits.h> and <memory> each time vector[] is used.
+  # https://github.com/include-what-you-use/include-what-you-use/issues/166
+  { include: [ "<ext/alloc_traits.h>", private, "<vector>", public ] },
+
+]

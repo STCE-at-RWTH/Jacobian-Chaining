@@ -158,9 +158,9 @@ class DynamicProgrammingOptimizer : public Optimizer {
             fma_ji.op.start_time = end_time;
          } break;
 
-         case Action::NONE: {
+         default: {
             assert(false);
-         } break;
+         }
       }
 
       fma_ji.op.is_scheduled = true;

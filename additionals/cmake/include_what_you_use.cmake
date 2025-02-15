@@ -170,16 +170,16 @@ function(header_only_iwyu_targets tgt_name)
           -DIWYU_EXECUTABLE="${IWYU_EXECUTABLE}"
           -DIWYU_ARGS="${_flags}"
           -DIWYU_FILE="${header}"
-          -P ${CMake_Config_DIR}/scripts/run_iwyu.cmake
+          -P ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/scripts/run_iwyu.cmake
         DEPENDS ${header}
         COMMENT "Running IWYU on header file '${header}'")
 
       if(_ARG_DEPENDS)
         add_dependencies(${file_tgt_name} ${_ARG_DEPENDS})
       endif()
-      add_dependencies(${tgt_name} ${file_tgt_name})
+      add_dependencies(${tgt_name}_iwyu ${file_tgt_name})
     endforeach()
-    add_dependencies(header_only_iwyu ${tgt_name})
+    add_dependencies(header_only_iwyu ${tgt_name}_iwyu)
   endif()
 endfunction()
 

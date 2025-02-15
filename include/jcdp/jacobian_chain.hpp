@@ -85,6 +85,10 @@ struct JacobianChain {
                jk_jac.is_used = true;
                ki_jac.is_used = true;
             } break;
+
+            default: {
+               assert(false);
+            }
          }
       }
 
