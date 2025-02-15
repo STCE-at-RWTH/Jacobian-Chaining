@@ -10,6 +10,10 @@ include(util/print)
 # Enable intrinsics option
 option(ENABLE_NATIVE_INTRINSICS "Enable all host specific intrinsics." OFF)
 
+macro(print_intrinsics_status)
+  _print_status("Native intrinsics: '${ENABLE_NATIVE_INTRINSICS}'")
+endmacro()
+
 # **************************************************************************** #
 
 # Searches for the best architecture flags

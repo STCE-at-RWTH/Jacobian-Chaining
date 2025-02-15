@@ -16,15 +16,19 @@ include(CMakeParseArguments)
 include(util/print)
 
 # Enable cpplint option
-option(JCDP_CPPLINT "Enable Cpplint analysis." OFF)
+option(CPPLINT "Enable Cpplint analysis." OFF)
 
 # Check cpplint options
-if(JCDP_CPPLINT)
+if(CPPLINT)
   find_package(Cpplint REQUIRED)
 
   # Main header-only Cpplint target
   add_custom_target(header_only_cpplint ALL)
 endif()
+
+macro(print_cpplint_status)
+  _print_status("CPPLint analysis: '${CPPLINT}'")
+endmacro()
 
 # **************************************************************************** #
 # Setup classic Cpplint targets
@@ -35,7 +39,7 @@ function(check_everything_with_cpplint)
     "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
   # Enable Cpplint globally
-  if(JCDP_CPPLINT AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+  if(CPPLINT AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     _print_status("Cpplint: Enabling Cpplint for all targets")
 
     get_property(_enabled_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
@@ -62,7 +66,7 @@ function(check_with_cpplint tgt_name)
   endif()
 
   # Enable Cpplint for the given target
-  if(JCDP_CPPLINT AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+  if(CPPLINT AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     get_property(_enabled_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
     foreach(_language "C" "CXX")
       if(${_language} IN_LIST _enabled_languages)
@@ -82,13 +86,14 @@ function(header_only_cpplint_targets header_descriptor)
     "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
   # Enable Cpplint for given headers
-  if(JCDP_CPPLINT AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+  if(CPPLINT AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     _print_status(
       "Cpplint: Creating header-only cpplint targets (${header_descriptor})")
 
     foreach(header ${_ARG_HEADERS})
       get_filename_component(tgt_name ${header} NAME_WE)
-      set(tgt_name "${header_descriptor}_${tgt_name}_cpplint")
+      get_filename_component(extension ${header} EXT)
+      set(tgt_name "${header_descriptor}_${tgt_name}_${extension}_cpplint")
 
       # Create custom Cpplint target for each header file
       add_custom_target(${tgt_name}

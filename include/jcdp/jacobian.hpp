@@ -1,3 +1,10 @@
+/******************************************************************************
+ * @file jacobian.hpp
+ *
+ * @brief This file is part of the JCDP package. It provides a operations that
+ *        can be performed on a Jacobian chain, e.g. eliminations.
+ ******************************************************************************/
+
 #ifndef JCDP_JACOBIAN_HPP_
 #define JCDP_JACOBIAN_HPP_
 

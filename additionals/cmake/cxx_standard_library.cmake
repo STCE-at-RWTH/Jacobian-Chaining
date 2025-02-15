@@ -58,6 +58,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "(Clang|IntelLLVM|NVHPC)" OR
     CACHE STRING "The '--gcc-toolchain=' used by Clang-based compilers.")
 endif()
 
+macro(print_stdlib_status)
+  _print_status("C++ standard library: '${CXX_STD_LIB}'")
+endmacro()
+
 # **************************************************************************** #
 
 if(NOT CXX_STD_LIB STREQUAL "default")

@@ -1,3 +1,10 @@
+/******************************************************************************
+ * @file sequence.hpp
+ *
+ * @brief This file is part of the JCDP package. It provides a class which
+ *        represents an elimination sequence of a Jacobian chain.
+ ******************************************************************************/
+
 #ifndef JCDP_SEQUENCE_HPP_
 #define JCDP_SEQUENCE_HPP_
 

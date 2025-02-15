@@ -11,10 +11,10 @@ include(util/print)
 include(cxx_standard_library)
 
 # Enable IWYU option
-option(JCDP_INCLUDE_WHAT_YOU_USE "Enable include-what-you-use checks." OFF)
+option(INCLUDE_WHAT_YOU_USE "Enable include-what-you-use checks." OFF)
 
 # Check IWYU options
-if(JCDP_INCLUDE_WHAT_YOU_USE)
+if(INCLUDE_WHAT_YOU_USE)
   find_package(iwyu REQUIRED)
 
   # Check if compiler is clang
@@ -34,6 +34,10 @@ if(JCDP_INCLUDE_WHAT_YOU_USE)
   add_custom_target(header_only_iwyu ALL)
 endif()
 
+macro(print_iwyu_status)
+  _print_status("Include-what-you-use analysis: '${INCLUDE_WHAT_YOU_USE}'")
+endmacro()
+
 # **************************************************************************** #
 # Setup classic IWYU targets
 # **************************************************************************** #
@@ -49,7 +53,7 @@ function(check_everything_with_iwyu)
   endforeach()
 
   # Enable IWYU globally
-  if(JCDP_INCLUDE_WHAT_YOU_USE AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+  if(INCLUDE_WHAT_YOU_USE AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     _print_status("IWYU: Enabling include-what-you-use for all targets")
 
     get_property(_enabled_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
@@ -82,7 +86,7 @@ function(check_with_iwyu tgt_name)
   endforeach()
 
   # Enable IWYU for the given target
-  if(JCDP_INCLUDE_WHAT_YOU_USE AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+  if(INCLUDE_WHAT_YOU_USE AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     get_property(_enabled_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
     foreach(_language "C" "CXX")
       if(${_language} IN_LIST _enabled_languages)
@@ -105,7 +109,7 @@ function(header_only_iwyu_targets tgt_name)
     "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
   # Enable IWYU for given headers
-  if(JCDP_INCLUDE_WHAT_YOU_USE AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+  if(INCLUDE_WHAT_YOU_USE AND CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     # Collect flags
     set(_flags ${_ARG_COMPILER_FLAGS})
     foreach(_incdir ${_ARG_INCLUDE_DIRS})
@@ -154,10 +158,11 @@ function(header_only_iwyu_targets tgt_name)
     # Escape semicolons
     string (REPLACE ";" "\;" _flags "${_flags}")
 
-    add_custom_target(${tgt_name})
+    add_custom_target(${tgt_name}_iwyu)
     foreach(header ${_ARG_HEADERS})
       get_filename_component(file_tgt_name ${header} NAME_WE)
-      set(file_tgt_name "${tgt_name}_${file_tgt_name}")
+      get_filename_component(extension ${header} EXT)
+      set(file_tgt_name "${tgt_name}_${file_tgt_name}_${extension}_iwyu")
 
       # Create custom IWYU target for each header file
       add_custom_target(${file_tgt_name}

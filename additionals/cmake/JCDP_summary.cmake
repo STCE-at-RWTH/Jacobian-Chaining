@@ -1,5 +1,14 @@
-# Print build type again
 print_build_type()
+print_iwyu_status()
+print_cpplint_status()
+
+if(NOT WIN32)
+  print_stdlib_status()
+endif()
+
+print_sanitation_status()
+print_fpic_status()
+print_intrinsics_status()
 
 # OpenMP
 if(JCDP_USE_OPENMP)

@@ -15,6 +15,13 @@ option(SANITIZE_UNDEFINED_BEHAVIOUR "Enable UB sanitization check." OFF)
 
 get_property(_enabled_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
 
+macro(print_sanitation_status)
+  _print_status("Address sanitizer: '${SANITIZE_ADDRESS}'")
+  _print_status("Thread sanitizer: '${SANITIZE_THREADS}'")
+  _print_status("Leak sanitizer: '${SANITIZE_LEAK}'")
+  _print_status("Undefined Behaviour sanitizer: '${SANITIZE_UNDEFINED_BEHAVIOUR}'")
+endmacro()
+
 # **************************************************************************** #
 
 # Searches for the address sanitation flags
