@@ -1,3 +1,12 @@
+/******************************************************************************
+ * @file jcdp/optimizer/dynamic_programming.hpp
+ *
+ * @brief This file is part of the JCDP package. It provides an optimizer that
+ *        uses a dynamic programming algorithm to find the best possible
+ *        brackating (elimination sequence) for a given Jacobian chain.
+ *        Optimality is only given with one or unlimited threads.
+ ******************************************************************************/
+
 #ifndef JCDP_OPTIMIZER_DYNAMIC_PROGRAMMING_HPP_
 #define JCDP_OPTIMIZER_DYNAMIC_PROGRAMMING_HPP_
 
@@ -6,11 +15,11 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <limits>
 #include <memory>
 #include <optional>
-#include <limits>
-#include <utility> 
 #include <print>
+#include <utility>
 #include <vector>
 
 #include "jcdp/jacobian.hpp"
@@ -38,7 +47,6 @@ class DynamicProgrammingOptimizer : public Optimizer {
         const JacobianChain& chain,
         const std::shared_ptr<scheduler::Scheduler>& sched)
         -> void override final {
-
       Optimizer::init(chain, sched);
 
       std::size_t dp_nodes = m_length * (m_length + 1) / 2;
@@ -108,7 +116,6 @@ class DynamicProgrammingOptimizer : public Optimizer {
         const std::size_t j, const std::size_t i,
         const std::pair<std::size_t, std::size_t> thread_pool, Sequence& seq,
         std::size_t start_time = 0) -> std::size_t {
-
       const std::size_t t = thread_pool.second - thread_pool.first + 1;
       DPNode& fma_ji = node(j, i, t);
       assert(fma_ji.visited);
@@ -225,7 +232,6 @@ class DynamicProgrammingOptimizer : public Optimizer {
    auto try_multiplication(
         const std::size_t j, const std::size_t i, const std::size_t k,
         const std::size_t t) -> void {
-
       std::size_t cost = std::numeric_limits<std::size_t>::max();
       std::size_t thread_split = 0;
 
@@ -284,7 +290,6 @@ class DynamicProgrammingOptimizer : public Optimizer {
    auto try_elimination(
         const std::size_t j, const std::size_t i, const std::size_t k,
         const std::size_t t) -> void {
-
       std::size_t cost;
       std::size_t fma;
       if constexpr (mode == Mode::ADJOINT) {

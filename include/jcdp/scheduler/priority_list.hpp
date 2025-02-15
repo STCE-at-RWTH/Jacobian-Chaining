@@ -1,3 +1,13 @@
+/******************************************************************************
+ * @file jcdp/scheduler/priority_list.hpp
+ *
+ * @brief This file is part of the JCDP package. It provides a priority list
+ *        scheduler that uses the in-tree task dependencies of the elimination
+ *        sequence to sort the operations. Given the sorted operation it
+ *        performs a simple list scheduling. Results rather often in an optimal
+ *        schedule.
+ ******************************************************************************/
+
 #ifndef JCDP_SCHEDULER_PRIORITY_LIST_HPP_
 #define JCDP_SCHEDULER_PRIORITY_LIST_HPP_
 
@@ -23,7 +33,6 @@ class PriorityListScheduler : public Scheduler {
    virtual auto schedule_impl(
         Sequence& sequence, const std::size_t usable_threads,
         const std::size_t) const -> std::size_t override final {
-
       std::vector<std::size_t> queue_cont(sequence.length());
       std::iota(queue_cont.begin(), queue_cont.end(), 0);
 

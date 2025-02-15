@@ -1,3 +1,11 @@
+/******************************************************************************
+ * @file jcdp/scheduler/branch_and_bound.hpp
+ *
+ * @brief This file is part of the JCDP package. It provides branch & bound
+ *        algorithm to find the optimal schedule for a given elimination
+ *        sequence.
+ ******************************************************************************/
+
 #ifndef JCDP_SCHEDULER_BRANCH_AND_BOUND_HPP_
 #define JCDP_SCHEDULER_BRANCH_AND_BOUND_HPP_
 
@@ -20,7 +28,6 @@ class BranchAndBoundScheduler : public Scheduler {
    virtual auto schedule_impl(
         Sequence& sequence, const std::size_t usable_threads,
         const std::size_t upper_bound) const -> std::size_t override final {
-
       const std::size_t sequential_makespan = sequence.sequential_makespan();
 
       Sequence working_copy = sequence;
@@ -89,7 +96,7 @@ class BranchAndBoundScheduler : public Scheduler {
                   // Perform branching and exit if lower bound is reached
                   if (schedule_next_op(schedule_next_op)) {
                      return true;
-                  };
+                  }
                }
 
                thread_loads[t] = old_thread_load;

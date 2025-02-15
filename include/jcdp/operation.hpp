@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file operation.hpp
+ * @file jcdp/operation.hpp
  *
  * @brief This file is part of the JCDP package. It provides a operations that
  *        can be performed on a Jacobian chain, e.g. eliminations.
@@ -75,7 +75,6 @@ inline auto operator<=>(const Operation& lhs, const Operation& rhs)
 
 template<>
 struct std::formatter<jcdp::Action> : public std::formatter<std::string_view> {
-
    template<class FmtContext>
    auto format(const jcdp::Action& action, FmtContext& ctx) const
         -> FmtContext::iterator {
@@ -89,7 +88,6 @@ struct std::formatter<jcdp::Action> : public std::formatter<std::string_view> {
 
 template<>
 struct std::formatter<jcdp::Mode> : public std::formatter<std::string_view> {
-
    template<class FmtContext>
    auto format(const jcdp::Mode& mode, FmtContext& ctx) const
         -> FmtContext::iterator {
@@ -102,7 +100,6 @@ struct std::formatter<jcdp::Mode> : public std::formatter<std::string_view> {
 
 template<>
 struct std::formatter<jcdp::Operation> {
-
    template<class ParseContext>
    constexpr auto parse(ParseContext& ctx) -> ParseContext::iterator {
       return ctx.begin();

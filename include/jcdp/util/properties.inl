@@ -1,3 +1,10 @@
+/******************************************************************************
+ * @file jcdp/util/properties.inl
+ *
+ * @brief This file is part of the JCDP package. Contains inline and template
+ *        definitions for jcdp/util/properties.hpp.
+ ******************************************************************************/
+
 #ifndef JCDP_INCLUDE_UTIL_PROPERTIES_INL_
 #define JCDP_INCLUDE_UTIL_PROPERTIES_INL_
 

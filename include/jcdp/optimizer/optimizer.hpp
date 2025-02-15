@@ -1,3 +1,11 @@
+/******************************************************************************
+ * @file jcdp/optimizer/optimizer.hpp
+ *
+ * @brief This file is part of the JCDP package. It provides a base class
+ *        for an optimizer that finds tries to find the best possible
+ *        brackating (elimination sequence) for a given Jacobian chain.
+ ******************************************************************************/
+
 #ifndef JCDP_OPTIMIZER_OPTIMIZER_HPP_
 #define JCDP_OPTIMIZER_OPTIMIZER_HPP_
 
@@ -14,7 +22,7 @@
 #include "jcdp/util/properties.hpp"
 
 namespace jcdp {
-   class Sequence;
+class Sequence;
 }
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //

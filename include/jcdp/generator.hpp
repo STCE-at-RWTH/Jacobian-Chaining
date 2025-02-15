@@ -1,13 +1,21 @@
+/******************************************************************************
+ * @file jcdp/generator.hpp
+ *
+ * @brief This file is part of the JCDP package. It provides a Jacobian
+ *        generator that produces random chains of Jacobians based on given
+ *        properties.
+ ******************************************************************************/
+
 #ifndef JCDP_GENERATOR_HPP_
 #define JCDP_GENERATOR_HPP_
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <optional>
 #include <random>
-#include <cmath>
 #include <string>
 #include <utility>
 #include <vector>

@@ -1,3 +1,10 @@
+/******************************************************************************
+ * @file jcdp/jacobian_chain.hpp
+ *
+ * @brief This file is part of the JCDP package. It provides a class which
+ *        represents a Jacobian chain including all possible sub-chains.
+ ******************************************************************************/
+
 #ifndef JCDP_JACOBIAN_CHAIN_HPP_
 #define JCDP_JACOBIAN_CHAIN_HPP_
 

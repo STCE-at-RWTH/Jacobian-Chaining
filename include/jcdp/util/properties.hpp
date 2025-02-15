@@ -1,16 +1,25 @@
+/******************************************************************************
+ * @file jcdp/util/properties.hpp
+ *
+ * @brief This file is part of the JCDP package. It provides a base class
+ *        for a property reader that reads registered properties from an
+ *        input file.
+ ******************************************************************************/
+
 #ifndef JCDP_UTIL_PROPERTIES_HPP_
 #define JCDP_UTIL_PROPERTIES_HPP_
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
-#include <list>
 #include <filesystem>
+#include <list>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace jcdp {
-   class Properties;  // IWYU pragma: keep
+class Properties;  // IWYU pragma: keep
 }
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
@@ -24,7 +33,8 @@ namespace jcdp {
 class KeyNotRegisteredError : public std::runtime_error {
  public:
    //! Constructor of KeyNotRegisteredError.
-   KeyNotRegisteredError(const std::string& key, const std::string& list = "");
+   explicit KeyNotRegisteredError(
+        const std::string& key, const std::string& list = "");
 };
 
 /******************************************************************************

@@ -1,3 +1,12 @@
+/******************************************************************************
+ * @file jcdp.cpp
+ *
+ * @brief This file is part of the JCDP package. It provides an applications
+ *        that generated Jacobian chains based on a given config file and runs
+ *        dynamic programming, and Branch & Bound optimizers combined with
+ *        a list scheduler and a Branch & Bound scheduler.
+ ******************************************************************************/
+
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -12,7 +21,6 @@
 #include "jcdp/sequence.hpp"
 
 int main(int argc, char* argv[]) {
-
    jcdp::JacobianChainGenerator jcgen;
    jcdp::optimizer::DynamicProgrammingOptimizer dp_solver;
    jcdp::optimizer::BranchAndBoundOptimizer bnb_solver;

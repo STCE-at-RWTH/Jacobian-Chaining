@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file sequence.hpp
+ * @file jcdp/sequence.hpp
  *
  * @brief This file is part of the JCDP package. It provides a class which
  *        represents an elimination sequence of a Jacobian chain.
@@ -11,15 +11,15 @@
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <deque>  // IWYU pragma: export
+#include <format>
 #include <functional>
 #include <limits>
 #include <numeric>
 #include <optional>
 #include <vector>
-#include <cassert>
-#include <format>
 
 #include "jcdp/operation.hpp"
 
@@ -28,11 +28,10 @@
 namespace jcdp {
 
 class Sequence : public std::deque<Operation> {
-
  public:
    Sequence() = default;
 
-   Sequence(Operation&& rhs) : std::deque<Operation> {rhs} {};
+   explicit Sequence(Operation&& rhs) : std::deque<Operation> {rhs} {};
 
    inline auto makespan(const std::optional<std::size_t> thread = {})
         -> std::size_t {
@@ -92,7 +91,6 @@ class Sequence : public std::deque<Operation> {
    }
 
    inline auto critical_path() const -> std::size_t {
-
       std::size_t makespan = 0;
       for (std::size_t op_idx = 0; op_idx < length(); ++op_idx) {
          makespan = std::max(makespan, critical_path(op_idx));
@@ -103,7 +101,6 @@ class Sequence : public std::deque<Operation> {
    inline auto critical_path(
         const std::size_t op_idx, std::size_t start_time = 0) const
         -> std::size_t {
-
       start_time = std::max(start_time, at(op_idx).start_time);
       const std::size_t end_time = start_time + at(op_idx).fma;
       std::optional<std::size_t> p = parent(op_idx);
@@ -114,7 +111,6 @@ class Sequence : public std::deque<Operation> {
    }
 
    inline auto is_schedulable(const std::size_t op_idx) const -> bool {
-
       return std::all_of(
            cbegin(), cend(), [this, op_idx](const Operation& op) -> bool {
               if (at(op_idx) < op) {
@@ -126,14 +122,12 @@ class Sequence : public std::deque<Operation> {
    }
 
    inline auto is_scheduled() const -> bool {
-
       return std::all_of(cbegin(), cend(), [](const Operation& op) -> bool {
          return op.is_scheduled;
       });
    }
 
    inline auto earliest_start(const std::size_t op_idx) const -> std::size_t {
-
       return std::transform_reduce(
            cbegin(), cend(), static_cast<std::size_t>(0),
            [](const std::size_t lhs, const std::size_t rhs) -> std::size_t {
@@ -186,7 +180,6 @@ class Sequence : public std::deque<Operation> {
 
 template<>
 struct std::formatter<jcdp::Sequence> {
-
    template<class ParseContext>
    constexpr auto parse(ParseContext& ctx) -> ParseContext::iterator {
       return ctx.begin();
@@ -195,7 +188,6 @@ struct std::formatter<jcdp::Sequence> {
    template<class FmtContext>
    auto format(const jcdp::Sequence& seq, FmtContext& ctx) const
         -> FmtContext::iterator {
-
       typename FmtContext::iterator out = ctx.out();
       for (const jcdp::Operation& op : seq) {
          out = std::format_to(out, "{}\n", op);

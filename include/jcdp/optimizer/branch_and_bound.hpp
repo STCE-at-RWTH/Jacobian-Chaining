@@ -1,3 +1,11 @@
+/******************************************************************************
+ * @file jcdp/optimizer/dynamic_programming.hpp
+ *
+ * @brief This file is part of the JCDP package. It provides an optimizer that
+ *        uses a dynamic programming algorithm to find the best possible
+ *        brackating (elimination sequence) for a given Jacobian chain.
+ ******************************************************************************/
+
 #ifndef JCDP_OPTIMIZER_BRANCH_AND_BOUND_HPP_
 #define JCDP_OPTIMIZER_BRANCH_AND_BOUND_HPP_
 
@@ -8,7 +16,7 @@
 #include <cstddef>
 #include <memory>
 #include <numeric>
-#include <optional> 
+#include <optional>
 #include <print>
 #include <utility>
 #include <vector>
@@ -24,12 +32,10 @@
 namespace jcdp::optimizer {
 
 class BranchAndBoundOptimizer : public Optimizer {
-
    using OpPair = std::array<std::optional<Operation>, 2>;
 
  public:
    virtual auto solve() -> Sequence override final {
-
       std::size_t accs = m_matrix_free ? 0 : (m_length - 1);
       m_leafs = 0;
       m_updated_makespan = 0;
@@ -55,7 +61,9 @@ class BranchAndBoundOptimizer : public Optimizer {
    inline auto print_stats() -> void {
       std::println("Leafs visited (= sequences scheduled): {}", m_leafs);
       std::println("Updated makespan: {}", m_updated_makespan);
-      std::println("Pruned branches: {}", std::reduce(m_pruned_branches.cbegin(), m_pruned_branches.cend()));
+      std::println(
+           "Pruned branches: {}",
+           std::reduce(m_pruned_branches.cbegin(), m_pruned_branches.cend()));
       std::println("Pruned branches per sequence length:");
       std::print("[ ");
       for (const std::size_t pruned : m_pruned_branches) {
@@ -73,8 +81,8 @@ class BranchAndBoundOptimizer : public Optimizer {
    std::size_t m_updated_makespan {0};
 
    inline auto add_accumulation(
-        Sequence &sequence, JacobianChain &chain, const std::size_t accs,
-        std::vector<OpPair> &eliminations, std::size_t j = 0) -> void {
+        Sequence& sequence, JacobianChain& chain, const std::size_t accs,
+        std::vector<OpPair>& eliminations, std::size_t j = 0) -> void {
       if (accs > 0) {
          for (; j < m_chain.length(); ++j) {
             const Operation op = cheapest_accumulation(j);
@@ -106,7 +114,6 @@ class BranchAndBoundOptimizer : public Optimizer {
    inline auto add_elimination(
         Sequence& sequence, JacobianChain& chain,
         std::vector<OpPair>& eliminations, std::size_t elim_idx = 0) -> void {
-
       // Check if we accumulated the entire jacobian
       if (chain.get_jacobian(chain.length() - 1, 0).is_accumulated) {
          assert(elim_idx == eliminations.size() - 1);
@@ -171,7 +178,6 @@ class BranchAndBoundOptimizer : public Optimizer {
    }
 
    inline auto cheapest_accumulation(const std::size_t j) -> Operation {
-
       const Jacobian& jac = m_chain.get_jacobian(j, j);
       Operation op {
            .action = Action::ACCUMULATION,
@@ -195,7 +201,6 @@ class BranchAndBoundOptimizer : public Optimizer {
    inline auto push_possible_eliminations(
         const JacobianChain& chain, std::vector<OpPair>& eliminations,
         const std::size_t op_j, const std::size_t op_i) -> void {
-
       OpPair ops {};
 
       // Tangent or multiplication
