@@ -50,9 +50,12 @@ class BranchAndBoundOptimizer : public Optimizer {
    }
 
    inline auto print_stats() -> void {
-      std::println(
-           "Number of leafs: {}\nUpdated makespan: {}\nPruned branches: {}",
-           m_leafs, m_updated_makespan, m_pruned_branches);
+      std::println("Number of leafs: {}", m_leafs);
+      std::println("Updated makespan: {}", m_updated_makespan);
+      std::println("Pruned branches per sequence length:");
+      for (const std::size_t pruned : m_pruned_branches) {
+         std::print("{} ", pruned);
+      }
    }
 
  private:

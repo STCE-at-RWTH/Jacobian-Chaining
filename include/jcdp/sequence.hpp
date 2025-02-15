@@ -11,6 +11,8 @@
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 #include <algorithm>
+#include <cstddef>
+#include <functional>
 #include <limits>
 #include <numeric>
 #include <optional>
@@ -44,11 +46,11 @@ class Sequence : public std::deque<Operation> {
    }
 
    inline auto sequential_makespan() -> std::size_t {
-      return std::reduce(
-           cbegin(), cend(), static_cast<std::size_t>(0),
-           [](const std::size_t cost, const Operation& op) -> std::size_t {
-              return cost + op.fma;
-           });
+      return std::transform_reduce(
+           cbegin(), cend(), static_cast<std::size_t>(0), std::plus<>(),
+           [](const Operation& op) -> std::size_t {
+              return op.fma;
+         });
    }
 
    inline auto children(const std::size_t op_idx) const
@@ -132,16 +134,16 @@ class Sequence : public std::deque<Operation> {
    inline auto earliest_start(const std::size_t op_idx) const
         -> std::size_t {
 
-      return std::reduce(
+      return std::transform_reduce(
            cbegin(), cend(), static_cast<std::size_t>(0),
-           [this, op_idx](
-                const std::size_t start, const Operation& op) -> std::size_t {
-              if (at(op_idx) < op) {
-                 return std::max(start, op.start_time + op.fma);
-              }
-
-              return start;
-           });
+           [](const std::size_t start, const std::size_t op_start) -> std::size_t {
+               return std::max(start, op_start);
+           }, [this, op_idx](const Operation& op) -> std::size_t {
+               if (at(op_idx) < op) {
+                  return op.start_time + op.fma;
+               }
+               return 0;
+            });
    }
 
    inline auto operator+(const Sequence& rhs) -> const Sequence {
@@ -151,7 +153,9 @@ class Sequence : public std::deque<Operation> {
    }
 
    inline auto operator+=(const Sequence& rhs) -> Sequence {
-      append_range(rhs);
+      for (const Operation &op : rhs) {
+         push_back(op);
+      }
       return *this;
    }
 
