@@ -83,8 +83,9 @@ int main(int argc, char* argv[]) {
             bnb_solver.m_usable_threads = t;
             jcdp::Sequence bnb_seq_list = bnb_solver.solve();
 
-            // Solve via branch & bound
+            // Solve via branch & bound + branch & bound scheduling
             bnb_solver.init(chain, bnb_scheduler);
+            bnb_solver.set_upper_bound(bnb_seq_list.makespan());
             bnb_solver.m_usable_threads = t;
             jcdp::Sequence bnb_seq = bnb_solver.solve();
 
