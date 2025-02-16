@@ -13,8 +13,8 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <vector>
 #include <print>
+#include <vector>
 
 #include "jcdp/operation.hpp"
 #include "jcdp/scheduler/scheduler.hpp"
@@ -28,7 +28,7 @@ class BranchAndBoundScheduler : public Scheduler {
  public:
    virtual auto schedule_impl(
         Sequence& sequence, const std::size_t usable_threads,
-        const std::size_t upper_bound) const -> std::size_t override final {
+        const std::size_t upper_bound) -> std::size_t override final {
       const std::size_t sequential_makespan = sequence.sequential_makespan();
 
       Sequence working_copy = sequence;
@@ -50,6 +50,11 @@ class BranchAndBoundScheduler : public Scheduler {
       }
 
       auto schedule_op = [&](auto& schedule_next_op) -> bool {
+         // Return if time's up
+         if (!remaining_time()) {
+            return true;
+         }
+
          bool everything_scheduled = true;
          for (std::size_t op_idx = 0; op_idx < sequence.length(); ++op_idx) {
             if (working_copy[op_idx].is_scheduled) {
@@ -74,7 +79,8 @@ class BranchAndBoundScheduler : public Scheduler {
                   tried_empty_processor = true;
                }
 
-               const std::size_t old_start_time = working_copy[op_idx].start_time;
+               const std::size_t old_start_time =
+                    working_copy[op_idx].start_time;
                const std::size_t start_time = std::max(thread_loads[t], start);
                working_copy[op_idx].start_time = start_time;
 
@@ -92,13 +98,11 @@ class BranchAndBoundScheduler : public Scheduler {
                     working_copy.critical_path());
                if (std::max(lb, makespan) < best_makespan) {
                   working_copy[op_idx].thread = t;
-                  
 
                   // Perform branching and exit if lower bound is reached
                   if (schedule_next_op(schedule_next_op)) {
                      return true;
                   }
-
                }
 
                thread_loads[t] = old_thread_load;

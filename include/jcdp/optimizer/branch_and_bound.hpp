@@ -13,6 +13,7 @@
 
 #include <array>
 #include <cassert>
+#include <chrono>
 #include <cstddef>
 #include <memory>
 #include <numeric>
@@ -27,15 +28,25 @@
 #include "jcdp/optimizer/optimizer.hpp"
 #include "jcdp/scheduler/scheduler.hpp"
 #include "jcdp/sequence.hpp"
+#include "jcdp/util/properties.hpp"
+#include "jcdp/util/timer.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 namespace jcdp::optimizer {
 
-class BranchAndBoundOptimizer : public Optimizer {
+class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
    using OpPair = std::array<std::optional<Operation>, 2>;
 
  public:
+   BranchAndBoundOptimizer() : Optimizer() {
+      register_property(
+           m_time_to_solve, "time_to_solve",
+           "Maximal runtime for the branch & bound solver in seconds.");
+   }
+
+   virtual ~BranchAndBoundOptimizer() = default;
+
    auto init(
         const JacobianChain& chain,
         const std::shared_ptr<scheduler::Scheduler>& sched) -> void {
@@ -45,6 +56,7 @@ class BranchAndBoundOptimizer : public Optimizer {
       m_optimal_sequence = Sequence::make_max();
       m_makespan = m_optimal_sequence.makespan();
       m_upper_bound = m_makespan;
+      m_timer_expired = false;
 
       m_leafs = 0;
       m_updated_makespan = 0;
@@ -53,6 +65,9 @@ class BranchAndBoundOptimizer : public Optimizer {
    }
 
    virtual auto solve() -> Sequence override final {
+
+      set_timer(m_time_to_solve);
+      start_timer();
       std::size_t accs = m_matrix_free ? 0 : (m_length - 1);
 
       #pragma omp parallel default(shared)
@@ -130,6 +145,12 @@ class BranchAndBoundOptimizer : public Optimizer {
    inline auto add_elimination(
         Sequence& sequence, JacobianChain& chain,
         std::vector<OpPair>& eliminations, std::size_t elim_idx = 0) -> void {
+
+      // Return if time's up
+      if (!remaining_time()) {
+         return;
+      }
+
       // Check if we accumulated the entire jacobian
       if (chain.get_jacobian(chain.length() - 1, 0).is_accumulated) {
          assert(elim_idx == eliminations.size() - 1);
@@ -140,19 +161,27 @@ class BranchAndBoundOptimizer : public Optimizer {
 
          // Start new task for the scheduling of the final sequence. If
          // branch & bound is used, this can take some time.
-         #pragma omp task default(shared) firstprivate(final_sequence)
+          #pragma omp task default(shared) \
+                          firstprivate(final_sequence, m_scheduler)
          {
-            const std::size_t new_makespan = m_scheduler->schedule(
-                 final_sequence, m_usable_threads, m_makespan);
+            const double time_to_schedule = remaining_time();
+            if (time_to_schedule) {
+               m_scheduler->set_timer(time_to_schedule);
 
-            #pragma omp atomic
-            m_leafs++;
+               const std::size_t new_makespan = m_scheduler->schedule(
+                    final_sequence, m_usable_threads, m_makespan);
 
-            #pragma omp critical
-            if (m_makespan > new_makespan) {
-               m_optimal_sequence = final_sequence;
-               m_makespan = new_makespan;
-               m_updated_makespan++;
+               m_timer_expired |= !m_scheduler->finished_in_time();
+
+               #pragma omp atomic
+               m_leafs++;
+
+               #pragma omp critical
+               if (m_makespan > new_makespan) {
+                  m_optimal_sequence = final_sequence;
+                  m_makespan = new_makespan;
+                  m_updated_makespan++;
+               }
             }
          }
          return;

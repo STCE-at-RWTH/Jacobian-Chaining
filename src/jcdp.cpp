@@ -7,6 +7,7 @@
  *        a list scheduler and a Branch & Bound scheduler.
  ******************************************************************************/
 
+#include <chrono>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -54,78 +55,75 @@ int main(int argc, char* argv[]) {
    dp_solver.print_values(std::cout);
 
    jcdp::JacobianChain chain;
-   while (jcgen.next(chain)) {
-      chain.init_subchains();
+   jcgen.next(chain);
+   chain.init_subchains();
 
-      std::println(
-           "Tangent cost: {}",
-           chain.get_jacobian(chain.length() - 1, 0).fma<jcdp::Mode::TANGENT>());
-      std::println(
-           "Adjoint cost: {}",
-           chain.get_jacobian(chain.length() - 1, 0).fma<jcdp::Mode::ADJOINT>());
+   std::println(
+        "Tangent cost: {}",
+        chain.get_jacobian(chain.length() - 1, 0).fma<jcdp::Mode::TANGENT>());
+   std::println(
+        "Adjoint cost: {}",
+        chain.get_jacobian(chain.length() - 1, 0).fma<jcdp::Mode::ADJOINT>());
 
-      // Solve via dynamic programming
-      dp_solver.init(chain);
-      auto start_dp = std::chrono::high_resolution_clock::now();
-      jcdp::Sequence dp_seq = dp_solver.solve();
-      auto end_dp = std::chrono::high_resolution_clock::now();
-      std::chrono::duration<double> duration_dp = end_dp - start_dp;
-      std::println("\nDP solve duration: {} seconds", duration_dp.count());
-      std::println("Optimized cost (DP): {}\n", dp_seq.makespan());
-      std::println("{}", dp_seq);
+   // Solve via dynamic programming
+   dp_solver.init(chain);
+   auto start_dp = std::chrono::high_resolution_clock::now();
+   jcdp::Sequence dp_seq = dp_solver.solve();
+   auto end_dp = std::chrono::high_resolution_clock::now();
+   std::chrono::duration<double> duration_dp = end_dp - start_dp;
+   std::println("\nDP solve duration: {} seconds", duration_dp.count());
+   std::println("Optimized cost (DP): {}\n", dp_seq.makespan());
+   std::println("{}", dp_seq);
 
-      // Schedule dynamic programming sequence via list scheduling
-      auto start_list_sched = std::chrono::high_resolution_clock::now();
-      list_scheduler->schedule(dp_seq, dp_solver.m_usable_threads);
-      auto end_list_sched = std::chrono::high_resolution_clock::now();
-      std::chrono::duration<double> duration_list_sched = end_list_sched -
-                                                          start_list_sched;
-      std::println(
-           "\nScheduling duration: {} seconds", duration_list_sched.count());
-      std::println(
-           "Optimized cost (DP + List scheduling): {}\n", dp_seq.makespan());
-      std::println("{}", dp_seq);
+   // Schedule dynamic programming sequence via list scheduling
+   auto start_list_sched = std::chrono::high_resolution_clock::now();
+   list_scheduler->schedule(dp_seq, dp_solver.m_usable_threads);
+   auto end_list_sched = std::chrono::high_resolution_clock::now();
+   std::chrono::duration<double> duration_list_sched = end_list_sched -
+                                                       start_list_sched;
+   std::println(
+        "\nScheduling duration: {} seconds", duration_list_sched.count());
+   std::println(
+        "Optimized cost (DP + List scheduling): {}\n", dp_seq.makespan());
+   std::println("{}", dp_seq);
 
-      // Schedule dynamic programming sequence via branch & bound
-      auto start_sched = std::chrono::high_resolution_clock::now();
-      bnb_scheduler->schedule(
-           dp_seq, dp_solver.m_usable_threads);
-      auto end_sched = std::chrono::high_resolution_clock::now();
-      std::chrono::duration<double> duration_sched = end_sched - start_sched;
-      std::println("\nScheduling duration: {} seconds", duration_sched.count());
-      std::println(
-           "Optimized cost (DP + B&B scheduling): {}\n", dp_seq.makespan());
-      std::println("{}", dp_seq);
+   // Schedule dynamic programming sequence via branch & bound
+   auto start_sched = std::chrono::high_resolution_clock::now();
+   bnb_scheduler->schedule(dp_seq, dp_solver.m_usable_threads);
+   auto end_sched = std::chrono::high_resolution_clock::now();
+   std::chrono::duration<double> duration_sched = end_sched - start_sched;
+   std::println("\nScheduling duration: {} seconds", duration_sched.count());
+   std::println(
+        "Optimized cost (DP + B&B scheduling): {}\n", dp_seq.makespan());
+   std::println("{}", dp_seq);
 
-      // Solve via branch & bound + List scheduling
-      bnb_solver.init(chain, list_scheduler);
-      bnb_solver.set_upper_bound(dp_seq.makespan());
-      auto start_bnb_list = std::chrono::high_resolution_clock::now();
-      jcdp::Sequence bnb_seq_list = bnb_solver.solve();
-      auto end_bnb_list = std::chrono::high_resolution_clock::now();
-      std::chrono::duration<double> duration_bnb_list = end_bnb_list -
-                                                        start_bnb_list;
-      std::println(
-           "\nBnB (List) solve duration: {} seconds",
-           duration_bnb_list.count());
-      bnb_solver.print_stats();
-      std::println(
-           "Optimized cost (BnB + List scheduling): {}\n",
-           bnb_seq_list.makespan());
-      std::println("{}", bnb_seq_list);
+   // Solve via branch & bound + List scheduling
+   bnb_solver.init(chain, list_scheduler);
+   bnb_solver.set_upper_bound(dp_seq.makespan());
+   auto start_bnb_list = std::chrono::high_resolution_clock::now();
+   jcdp::Sequence bnb_seq_list = bnb_solver.solve();
+   auto end_bnb_list = std::chrono::high_resolution_clock::now();
+   std::chrono::duration<double> duration_bnb_list = end_bnb_list -
+                                                     start_bnb_list;
+   std::println(
+        "\nBnB (List) solve duration: {} seconds", duration_bnb_list.count());
+   bnb_solver.print_stats();
+   std::println(
+        "Optimized cost (BnB + List scheduling): {}\n",
+        bnb_seq_list.makespan());
+   std::println("{}", bnb_seq_list);
 
-      // Solve via branch & bound
-      bnb_solver.init(chain, bnb_scheduler);
-      bnb_solver.set_upper_bound(bnb_seq_list.makespan());
-      auto start_bnb = std::chrono::high_resolution_clock::now();
-      jcdp::Sequence bnb_seq = bnb_solver.solve();
-      auto end_bnb = std::chrono::high_resolution_clock::now();
-      std::chrono::duration<double> duration_bnb = end_bnb - start_bnb;
-      std::println("\nBnB solve duration: {} seconds", duration_bnb.count());
-      bnb_solver.print_stats();
-      std::println("Optimized cost (BnB): {}\n", bnb_seq.makespan());
-      std::println("{}", bnb_seq);
-   }
+   // Solve via branch & bound
+   bnb_solver.init(chain, bnb_scheduler);
+   bnb_solver.set_upper_bound(bnb_seq_list.makespan());
+   auto start_bnb = std::chrono::high_resolution_clock::now();
+   jcdp::Sequence bnb_seq = bnb_solver.solve();
+   auto end_bnb = std::chrono::high_resolution_clock::now();
+   std::chrono::duration<double> duration_bnb = end_bnb - start_bnb;
+   std::println("\nBnB solve duration: {} seconds", duration_bnb.count());
+   bnb_solver.print_stats();
+   std::println("Optimized cost (BnB): {}\n", bnb_seq.makespan());
+   std::println("{}", bnb_seq);
 
    return 0;
 }

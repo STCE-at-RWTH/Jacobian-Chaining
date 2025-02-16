@@ -16,20 +16,23 @@
 #include <print>
 
 #include "jcdp/sequence.hpp"
+#include "jcdp/util/timer.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 namespace jcdp::scheduler {
 
-class Scheduler {
+class Scheduler : public util::Timer {
  public:
    Scheduler() = default;
    virtual ~Scheduler() = default;
 
    inline auto schedule(
         Sequence& sequence, const std::size_t threads,
-        const std::size_t upper_bound =
-             std::numeric_limits<std::size_t>::max()) const -> std::size_t {
+        const std::size_t upper_bound = std::numeric_limits<std::size_t>::max())
+        -> std::size_t {
+
+      start_timer();
 
       // We can never use more threads than we have accumulations
       std::size_t usable_threads = sequence.count_accumulations();
@@ -40,8 +43,7 @@ class Scheduler {
       return schedule_impl(sequence, usable_threads, upper_bound);
    }
 
-   virtual auto schedule_impl(
-        Sequence&, const std::size_t, const std::size_t) const
+   virtual auto schedule_impl(Sequence&, const std::size_t, const std::size_t)
         -> std::size_t = 0;
 };
 

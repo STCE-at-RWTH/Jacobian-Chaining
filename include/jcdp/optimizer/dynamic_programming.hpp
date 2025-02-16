@@ -53,7 +53,6 @@ class DynamicProgrammingOptimizer : public Optimizer {
          dp_nodes -= (m_usable_threads - 1) * m_length;
       }
 
-      std::println("Dynamic Programming nodes: {}", dp_nodes);
       m_dptable.clear();
       m_dptable.resize(dp_nodes);
    }
@@ -122,7 +121,7 @@ class DynamicProgrammingOptimizer : public Optimizer {
             fma_ji.op.thread = thread_pool.first;
             if (m_usable_threads > 0) {
                fma_ji.op.start_time = std::max(
-                  seq.makespan(fma_ji.op.thread), start_time);
+                    seq.makespan(fma_ji.op.thread), start_time);
             } else {
                fma_ji.op.start_time = 0;
             }

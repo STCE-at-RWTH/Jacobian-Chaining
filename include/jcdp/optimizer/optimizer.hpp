@@ -27,7 +27,7 @@ class Sequence;
 
 namespace jcdp::optimizer {
 
-class Optimizer : public Properties {
+class Optimizer : public util::Properties {
  public:
    Optimizer() {
       register_property(

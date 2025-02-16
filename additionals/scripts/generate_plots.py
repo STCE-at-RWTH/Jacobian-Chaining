@@ -31,22 +31,14 @@ parser = argparse.ArgumentParser(
 parser.add_argument("args", nargs="*", action="store", help="Files to process")
 opts = parser.parse_args()
 
-optimizers = [
-  "GreedyMinCost",
-  "GreedyEdgeMinFill",
-  "GreedyJacobianMinFill",
-  "SparseTangentAdjoint",
-  "Minimum",
+solvers = [
+  "DP",
+  "DP_BnB",
+  "BnB_List",
+  "BnB_BnB",
 ]
 
-schedulers = [
-    "BranchAndBoundScheduler",
-    # "GrahamsListScheduler",
-    "MinIdleTimeScheduler",
-]
-
-# processors = ["5", "6", "7", "8", "9", "10"]
-processors = ["1", "2", "6"]
+processors = ["1", "2", "3"]
 
 heuristic_labels = {
   "GreedyMinCost": "GreedyMinCost",
@@ -59,53 +51,18 @@ heuristic_labels = {
   "Minimum": "Overall minimum",
 }
 
-
 def main():
     df_list = list(pd.read_csv(arg) for arg in opts.args)
 
-    # Only use the minimum of SparseTangent and SparseAdjoint
-    # for sched in schedulers:
-    #     for p in processors:
-    #         df["SparseTangentAdjoint/" + sched + "/" + p] = np.minimum(
-    #             df["SparseTangent/" + sched + "/" + p],
-    #             df["SparseAdjoint/" + sched + "/" + p],
-    #         )
-    #         df["Minimum/" + sched + "/" + p] = df["SparseTangentAdjoint/" + sched + "/" + p]
-    #         df["Minimum/" + sched + "/" + p] = np.minimum(
-    #             df["GreedyMinCost/" + sched + "/" + p],
-    #             df["Minimum/" + sched + "/" + p]
-    #         )
-    #         df["Minimum/" + sched + "/" + p] = np.minimum(
-    #             df["GreedyEdgeMinFill/" + sched + "/" + p],
-    #             df["Minimum/" + sched + "/" + p]
-    #         )
-
     # Box plots over processor amounts for each heuristic combination
-    reference = "BranchAndBound/BranchAndBoundScheduler/"
+    reference = "BnB_BnB/"
     axs = plt.axes()
-    # fig.set_size_inches(9, 3)
-    # for i, opt in enumerate(optimizers):
-    #     axs[i, 0].set_ylabel(heuristic_labels[opt], fontsize='large')
-    #     for j, sched in enumerate(schedulers):
-    #         axs[0, j].set_title(heuristic_labels[sched])
-
-            # if j < len(schedulers) - 1:
-            #     if j == 0:
-            #         axs[i, j].set_yticks([])
-            #     else:
-            #         axs[i, j].yaxis.set_visible(False)
-            # else:
-            #     axs[i, j].yaxis.set_label_position("right")
-            #     axs[i, j].yaxis.tick_right()
 
     df2 = pd.DataFrame()
     for df in df_list:
         for p in processors:
-            label = "dp/" + p
-            df2[p] = df[reference + p] / df[label] * 100
-            # if any(df2[p] < 25):
-            #     print(label)
-            #     print(df2[p][df2[p] < 25])
+            label = "DP/"
+            df2[p] = df[reference + p] / df[label + p] * 100
             print(label + " " + str(len(list(filter(lambda x: x >= 100, list(df2[p])))) / len(df2[p])))
             print(label + " " + str(min(list(df2[p]))))
 

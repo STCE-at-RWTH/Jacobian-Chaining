@@ -27,7 +27,7 @@
 
 // >>>>>>>>>>>>>>>>>>>>>> TEMPLATE AND INLINE CONTENTS <<<<<<<<<<<<<<<<<<<<<< //
 
-namespace jcdp {
+namespace jcdp::util {
 
 // ------------------------- KeyNotRegisteredError -------------------------- //
 
@@ -279,6 +279,6 @@ inline auto Properties::print_values(std::ostream& o) -> void {
    }
 }
 
-}  // namespace jcdp
+}  // namespace jcdp::util
 
 #endif  // JCDP_INCLUDE_UTIL_PROPERTIES_INL_

@@ -28,7 +28,7 @@
 
 namespace jcdp {
 
-class JacobianChainGenerator : public Properties {
+class JacobianChainGenerator : public util::Properties {
  public:
    JacobianChainGenerator() {
       register_property(
@@ -66,8 +66,7 @@ class JacobianChainGenerator : public Properties {
 
    //! Generate a random Jacobian chain.
    inline auto next(JacobianChain& chain) -> bool {
-      const std::size_t idx = length_idx * m_amount + batch_idx;
-      if (idx >= m_amount * m_chain_lengths.size()) {
+      if (empty()) {
          return false;
       }
 
@@ -89,8 +88,18 @@ class JacobianChainGenerator : public Properties {
       if (++batch_idx >= m_amount) {
          batch_idx = 0;
          length_idx++;
+         return false;
       }
       return true;
+   }
+
+   inline auto current_length() -> std::size_t {
+      return m_chain_lengths[length_idx];
+   }
+
+   inline auto empty() -> bool {
+      const std::size_t idx = length_idx * m_amount + batch_idx;
+      return idx >= m_amount * m_chain_lengths.size();
    }
 
  private:

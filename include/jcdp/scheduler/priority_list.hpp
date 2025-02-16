@@ -31,8 +31,9 @@ namespace jcdp::scheduler {
 class PriorityListScheduler : public Scheduler {
  public:
    virtual auto schedule_impl(
-        Sequence& sequence, const std::size_t usable_threads,
-        const std::size_t) const -> std::size_t override final {
+        Sequence& sequence, const std::size_t usable_threads, const std::size_t)
+        -> std::size_t override final {
+
       std::vector<std::size_t> queue_cont(sequence.length());
       std::iota(queue_cont.begin(), queue_cont.end(), 0);
 

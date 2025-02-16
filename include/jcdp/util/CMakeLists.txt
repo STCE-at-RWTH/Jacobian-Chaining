@@ -1,7 +1,8 @@
 # Collect local headers
 set(_local_headers
-  ${CMAKE_CURRENT_SOURCE_DIR}/properties.hpp)
-  #${CMAKE_CURRENT_SOURCE_DIR}/properties.inl)
+  ${CMAKE_CURRENT_SOURCE_DIR}/properties.hpp
+  #${CMAKE_CURRENT_SOURCE_DIR}/properties.inl
+  ${CMAKE_CURRENT_SOURCE_DIR}/timer.hpp)
 
 # Setup header-only IWYU target
 header_only_iwyu_targets("jcdp_util"

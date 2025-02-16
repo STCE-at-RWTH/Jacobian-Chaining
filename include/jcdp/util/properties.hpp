@@ -18,13 +18,13 @@
 #include <utility>
 #include <vector>
 
-namespace jcdp {
+namespace jcdp::util {
 class Properties;  // IWYU pragma: keep
 }
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
-namespace jcdp {
+namespace jcdp::util {
 
 /******************************************************************************
  * @brief Thrown if a key that is not registered to the properties is
@@ -206,7 +206,7 @@ class Properties {
    bool m_waste;
 };
 
-}  // end namespace jcdp
+}  // end namespace jcdp::util
 
 // >>>>>>>>>>>>>>>> INCLUDE TEMPLATE AND INLINE DEFINITIONS <<<<<<<<<<<<<<<<< //
 
