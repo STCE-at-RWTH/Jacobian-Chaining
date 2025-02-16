@@ -45,8 +45,8 @@ int main(int argc, char* argv[]) {
    jcdp::JacobianChain chain;
    while (!jcgen.empty()) {
       const std::size_t len = jcgen.current_length();
-      std::filesystem::path output_file = (
-         output_file_name + std::to_string(len) + ".csv");
+      std::filesystem::path output_file =
+           (output_file_name + std::to_string(len) + ".csv");
 
       std::ofstream out(output_file);
       if (!out) {

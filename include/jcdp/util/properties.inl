@@ -13,15 +13,15 @@
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 #include <cstddef>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <list>
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <vector>
 #include <utility>
-#include <filesystem>
+#include <vector>
 
 #include "jcdp/util/properties.hpp"  // IWYU pragma: keep
 

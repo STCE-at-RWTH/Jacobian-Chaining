@@ -19,6 +19,9 @@
 *.lof
 *.lot
 
+# ignore dot files
+*.dot
+
 # xelatex build files
 *.xdv
 
