@@ -1,7 +1,6 @@
 # **************************************************************************** #
 # This file is part of the JCDP build system. It provides the main CMake
-# entry point, which generates all necessary sources and builds the JCDP
-# libraries and executables.
+# entry point.
 # **************************************************************************** #
 
 cmake_minimum_required(VERSION 3.25.0)
@@ -55,8 +54,8 @@ print_title("${JCDP_PROJECT_DESCRIPTION}" EMPTY_BEFORE EMPTY_AFTER)
 # **************************************************************************** #
 option(JCDP_USE_OPENMP
   "Whether to use OpenMP." ON)
-option(JCDP_BUILD_DOXYGEN
-  "Whether to build the Doxygen documentation." OFF)
+# option(JCDP_BUILD_DOXYGEN
+#   "Whether to build the Doxygen documentation." OFF)
 
 # **************************************************************************** #
 # Include some modules (intrinsics, PIC, sanitation, etc.)
@@ -66,22 +65,18 @@ include(cxx_standard_library)
 include(enable_intrinsics)
 include(enable_position_independent_code)
 include(enable_sanitation)
-
-# **************************************************************************** #
-# Find necessary packages
-# **************************************************************************** #
-if(JCDP_BUILD_DOXYGEN)
-  find_package(Doxygen REQUIRED dot OPTIONAL_COMPONENTS dia mscgen)
-endif()
-
-# **************************************************************************** #
-# Include more modules (compiler flags, iwyu, OpenMP)
-# **************************************************************************** #
 include(compiler_flags)
 include(include_what_you_use)
 include(cpplint)
 include(configure_compiler_warnings)
 include(openmp_backend)
+
+# **************************************************************************** #
+# Find necessary packages
+# **************************************************************************** #
+# if(JCDP_BUILD_DOXYGEN)
+#   find_package(Doxygen REQUIRED dot OPTIONAL_COMPONENTS dia mscgen)
+# endif()
 
 # **************************************************************************** #
 # JCDP include directories
