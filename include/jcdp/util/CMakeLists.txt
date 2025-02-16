@@ -1,5 +1,11 @@
+# **************************************************************************** #
+# This file is part of the JCDP build system. It generates some IWYU and
+# Cpplint for the header files.
+# **************************************************************************** #
+
 # Collect local headers
 set(_local_headers
+  ${CMAKE_CURRENT_SOURCE_DIR}/dot_writer.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/properties.hpp
   #${CMAKE_CURRENT_SOURCE_DIR}/properties.inl
   ${CMAKE_CURRENT_SOURCE_DIR}/timer.hpp)

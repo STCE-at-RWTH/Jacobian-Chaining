@@ -1,3 +1,8 @@
+# **************************************************************************** #
+# This file is part of the JCDP build system. It generates some IWYU and
+# Cpplint for the header files.
+# **************************************************************************** #
+
 # Collect local headers
 set(_local_headers
   ${CMAKE_CURRENT_SOURCE_DIR}/branch_and_bound.hpp
