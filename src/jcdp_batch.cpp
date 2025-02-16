@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
       jcgen.parse_config(config_filename, true);
       jcgen.init_rng();
    } catch (const std::runtime_error& bcfe) {
-      std::cerr << bcfe.what() << std::endl;
+      std::println(std::cerr, "{}", bcfe.what());
       return -1;
    }
 
@@ -44,27 +44,22 @@ int main(int argc, char* argv[]) {
 
    jcdp::JacobianChain chain;
    while (!jcgen.empty()) {
+      const std::size_t len = jcgen.current_length();
       std::filesystem::path output_file = (
-         output_file_name + std::to_string(jcgen.current_length()) + ".csv");
+         output_file_name + std::to_string(len) + ".csv");
 
       std::ofstream out(output_file);
       if (!out) {
-         std::cerr << "Failed to open " << output_file << std::endl;
+         std::println(std::cerr, "Failed to open {}", output_file.string());
          return -1;
       }
 
-      for (std::size_t t = 1; t <= jcgen.current_length(); ++t) {
-         out << "BnB_BnB/" << t << "/finished,";
-         out << "BnB_BnB/" << t << ",";
-         out << "BnB_List/" << t << ",";
-         out << "DP/" << t << ",";
-         out << "DP_BnB/" << t << ",";
-
-         if (t < jcgen.current_length()) {
-            out << ",";
-         } else {
-            out << "\n";
-         }
+      for (std::size_t t = 1; t <= len; ++t) {
+         std::print(out, "BnB_BnB/{}/finished,", t);
+         std::print(out, "BnB_BnB/{},", t);
+         std::print(out, "BnB_List/{},", t);
+         std::print(out, "DP/{},", t);
+         std::print(out, "DP_BnB/{}{}", t, (t < len) ? "," : "\n");
       }
 
       while (jcgen.next(chain)) {
@@ -72,39 +67,33 @@ int main(int argc, char* argv[]) {
 
          // Solve via dynamic programming
          dp_solver.init(chain);
-         dp_solver.m_usable_threads = chain.length();
+         dp_solver.m_usable_threads = len;
          dp_solver.solve();
 
-         for (std::size_t threads = 1; threads <= chain.length(); ++threads) {
-            jcdp::Sequence dp_seq = dp_solver.get_sequence(threads);
+         for (std::size_t t = 1; t <= len; ++t) {
+            jcdp::Sequence dp_seq = dp_solver.get_sequence(t);
             const std::size_t dp_makespan = dp_seq.makespan();
 
             // Schedule dynamic programming sequence via branch & bound
-            bnb_scheduler->schedule(dp_seq, threads, dp_makespan);
+            bnb_scheduler->schedule(dp_seq, t, dp_makespan);
 
             // Solve via branch & bound + List scheduling
             bnb_solver.init(chain, list_scheduler);
             bnb_solver.set_upper_bound(dp_seq.makespan());
-            bnb_solver.m_usable_threads = threads;
+            bnb_solver.m_usable_threads = t;
             jcdp::Sequence bnb_seq_list = bnb_solver.solve();
 
             // Solve via branch & bound
             bnb_solver.init(chain, bnb_scheduler);
-            bnb_solver.m_usable_threads = threads;
+            bnb_solver.m_usable_threads = t;
             jcdp::Sequence bnb_seq = bnb_solver.solve();
 
-            out << bnb_solver.finished_in_time() << ",";
-            out << bnb_seq.makespan() << ",";
-            out << bnb_seq_list.makespan() << ",";
-            out << dp_makespan << ",";
-            out << dp_seq.makespan();
-
-            if (threads < chain.length()) {
-               out << ",";
-            }
+            std::print(out, "{},", bnb_solver.finished_in_time());
+            std::print(out, "{},", bnb_seq.makespan());
+            std::print(out, "{},", bnb_seq_list.makespan());
+            std::print(out, "{},", dp_makespan);
+            std::print(out, "{}{}", dp_seq.makespan(), (t < len) ? "," : "\n");
          }
-
-         out << std::endl;
       }
 
       out.close();

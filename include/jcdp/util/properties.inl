@@ -73,7 +73,7 @@ inline BasicPropertyInfo::BasicPropertyInfo(
  ******************************************************************************/
 inline auto BasicPropertyInfo::from_str(const std::string& s) -> void {
    std::stringstream sst;
-   sst << s;
+   std::print(sst, "{}", s);
    from_pipe(sst);
 }
 
@@ -146,10 +146,7 @@ inline auto PropertyInfo<std::vector<T>>::to_string() const
      -> const std::string {
    std::ostringstream oss;
    for (std::size_t i = 0; i < this->m_ptr->size(); ++i) {
-      if (i != 0) {
-         oss << ",";
-      }
-      oss << this->m_ptr->at(i);
+      std::print(oss, "{}{}", (i > 0) ? "," : "", this->m_ptr->at(i));
    }
    return oss.str();
 }
@@ -254,29 +251,37 @@ inline auto Properties::parse_config(
  *              of the properties.
  ******************************************************************************/
 inline auto Properties::print_help(std::ostream& o) -> void {
-   size_t l = 0;
+   const std::size_t l = max_key_length();
    for (auto& pi : m_info) {
-      l = (pi->key().length() > l) ? pi->key().length() : l;
-   }
-
-   for (auto& pi : m_info) {
-      o.width(l);
-      o << pi->key();
-      o << ": " << pi->desc() << std::endl;
+      std::println(o, "{:>{}}: {}", pi->key(), l, pi->desc());
    }
 }
 
+/******************************************************************************
+ * @brief Prints the keys and current values of all registeres properties in a
+ *        structured way.
+ *
+ * @param[in] o Reference to std::ofstream to print the values
+ *              of the properties.
+ ******************************************************************************/
 inline auto Properties::print_values(std::ostream& o) -> void {
+   const std::size_t l = max_key_length();
+   for (auto& pi : m_info) {
+      std::println(o, "{:>{}}: {}", pi->key(), l, pi->to_string());
+   }
+}
+
+/******************************************************************************
+ * @brief Find the maximum key length of all registered properties.
+ *
+ * @returns std::size_t The maximum key length.
+ ******************************************************************************/
+inline auto Properties::max_key_length() -> std::size_t {
    size_t l = 0;
    for (auto& pi : m_info) {
-      l = (pi->key().length() > l) ? pi->key().length() : l;
+      l = std::max(pi->key().length(), l);
    }
-
-   for (auto& pi : m_info) {
-      o.width(l);
-      o << pi->key();
-      o << ": " << pi->to_string() << std::endl;
-   }
+   return l;
 }
 
 }  // namespace jcdp::util

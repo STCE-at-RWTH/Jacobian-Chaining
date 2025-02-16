@@ -1,9 +1,8 @@
 /******************************************************************************
  * @file jcdp/util/timer.hpp
  *
- * @brief This file is part of the JCDP package. It provides a base class
- *        for a property reader that reads registered properties from an
- *        input file.
+ * @brief This file is part of the JCDP package. It provides a timer class
+ *        which is used in the solvers to limit the time they can use.
  ******************************************************************************/
 
 #ifndef JCDP_UTIL_TIMER_HPP_
@@ -12,14 +11,7 @@
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 #include <chrono>
-#include <list>
 #include <print>
-#include <stdexcept>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include "jcdp/util/properties.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 

@@ -20,6 +20,7 @@
 #include "jcdp/scheduler/branch_and_bound.hpp"
 #include "jcdp/scheduler/priority_list.hpp"
 #include "jcdp/sequence.hpp"
+#include "jcdp/util/dot_writer.hpp"
 
 int main(int argc, char* argv[]) {
    jcdp::JacobianChainGenerator jcgen;
@@ -44,7 +45,7 @@ int main(int argc, char* argv[]) {
       jcgen.parse_config(config_filename, true);
       jcgen.init_rng();
    } catch (const std::runtime_error& bcfe) {
-      std::cerr << bcfe.what() << std::endl;
+      std::println(std::cerr, "{}", bcfe.what());
       return -1;
    }
 
@@ -74,6 +75,8 @@ int main(int argc, char* argv[]) {
    std::println("\nDP solve duration: {} seconds", duration_dp.count());
    std::println("Optimized cost (DP): {}\n", dp_seq.makespan());
    std::println("{}", dp_seq);
+
+   jcdp::util::write_dot(dp_seq, "dynamic_programming");
 
    // Schedule dynamic programming sequence via list scheduling
    auto start_list_sched = std::chrono::high_resolution_clock::now();
@@ -124,6 +127,8 @@ int main(int argc, char* argv[]) {
    bnb_solver.print_stats();
    std::println("Optimized cost (BnB): {}\n", bnb_seq.makespan());
    std::println("{}", bnb_seq);
+
+   jcdp::util::write_dot(bnb_seq, "branch_and_bound");
 
    return 0;
 }

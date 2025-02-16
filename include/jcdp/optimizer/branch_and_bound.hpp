@@ -28,7 +28,6 @@
 #include "jcdp/optimizer/optimizer.hpp"
 #include "jcdp/scheduler/scheduler.hpp"
 #include "jcdp/sequence.hpp"
-#include "jcdp/util/properties.hpp"
 #include "jcdp/util/timer.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //

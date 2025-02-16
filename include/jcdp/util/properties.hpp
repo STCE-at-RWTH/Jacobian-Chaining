@@ -189,6 +189,8 @@ class Properties {
    //! structured way.
    auto print_help(std::ostream& o) -> void;
 
+   //! Prints the keys and current values of all registeres properties in a
+   //! structured way.
    auto print_values(std::ostream& o) -> void;
 
  private:
@@ -197,6 +199,9 @@ class Properties {
    auto put(
         const std::string& key, std::ifstream& in,
         bool skip_not_registered_keys) -> void;
+
+   //! Find the maximum key length of all registered properties.
+   auto max_key_length() -> std::size_t;
 
    //! Contains pointers to all registered properties.
    std::list<BasicPropertyInfo*> m_info;
