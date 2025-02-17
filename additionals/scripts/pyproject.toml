@@ -1,0 +1,36 @@
+# **************************************************************************** #
+#                                     NPC                                      #
+# ---------------------------------------------------------------------------- #
+#                                                                              #
+#  Copyright (C) 2024 Numerical Algorithms Group (NAG)                         #
+#                                                                              #
+#  @file pyproject.toml                                                        #
+#        Python tool config for black, flake8, mypy and pylama.                #
+#                                                                              #
+# **************************************************************************** #
+
+[tool.black]
+line-length = 79
+target-version = ["py37"]
+
+[tool.mypy]
+python_version = "3.7"
+strict = true
+pretty = true
+
+[tool.flake8]
+exclude = [".git", "__pycache__", "build"]
+
+[tool.pylama]
+max_line_length = 79
+skip = [".git", "__pycache__", "build"]
+linters = "mccabe,pycodestyle,pyflakes"
+
+[tool.pylama.linter.mccabe]
+max-complexity = 20
+
+[tool.docformatter]
+black = true
+wrap-summaries = 72
+wrap-descriptions = 72
+in-place = true
