@@ -7,7 +7,9 @@ RUN \
     ca-certificates \
     software-properties-common \
     build-essential \
-    python3
+    cmake \
+    python3 \
+    python3-venv
 
 # Install python packages in virtual environment
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -28,11 +30,11 @@ ENV PATH="${PYTHON_VENV}/bin:${PATH}"
 
 # Build project
 WORKDIR /app
-COPY . .
+COPY . ./jcdp_src
 RUN \
-  mkdir build && \
-  cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/opt/jcdp \
-  cmake --build build \
-  cmake --install build
+  BUILD_DIR=`mktemp -d -p .` && \
+  cmake -B $BUILD_DIR -S jcdp_src -DCMAKE_INSTALL_PREFIX=/app && \
+  cmake --build $BUILD_DIR && \
+  cmake --install $BUILD_DIR && \
+  rm -rf $BUILD_DIR
 
-ENV PATH="/opt/jcdp/bin:${PATH}"
