@@ -95,6 +95,7 @@ int main(int argc, char* argv[]) {
             std::print(out, "{},", dp_makespan);
             std::print(out, "{}{}", dp_seq.makespan(), (t < len) ? "," : "\n");
          }
+         out.flush();
       }
 
       out.close();

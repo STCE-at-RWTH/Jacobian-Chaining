@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
    chain.init_subchains();
 
    std::println(
-        "Tangent cost: {}",
+        "\nTangent cost: {}",
         chain.get_jacobian(chain.length() - 1, 0).fma<jcdp::Mode::TANGENT>());
    std::println(
         "Adjoint cost: {}",
