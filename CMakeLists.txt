@@ -99,7 +99,7 @@ add_subdirectory(src)
 # Install targets
 # **************************************************************************** #
 install(DIRECTORY ${JCDP_CONFIG_DIR} DESTINATION .)
-install(DIRECTORY ${JCDP_SCRIPT_DIR} DESTINATION . FILES_MATCHING PATTERN "*.py")
+install(FILES ${JCDP_SCRIPT_DIR}/generate_plots.py DESTINATION .)
 
 # **************************************************************************** #
 # Summary
