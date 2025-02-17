@@ -64,3 +64,34 @@ docker run -it jcdp /app/jcdp /app/configs/config.in
 ```
 
 Alternatively, just run `docker run -it jcdp` and work from inside the container.
+
+## Config files
+
+The config files are checked for the following key-value pairs:
+
+- `length <q>`  
+   Length of the Jacobian chains.
+
+- `size_range <lower bound> <upper bound>`  
+   Range for the input $n_i$ and output sizes $m_i$.
+
+- `dag_size_range <lower bound> <upper bound>`  
+   Range for the size of the elemental DAGs $|E_i|$.
+
+- `available_threads <m>`  
+   Number of available machines / threads for scheduling. $m=0$ indicates infinite threads (unlimited parallelism).
+
+- `available_memory <M>`  
+   Memory limit per machine. $\bar{M} = 0$ indicates infinite memory.
+
+- `matrix_free <0/1>`  
+   Flag that enables matrix-free variant of the Jacobian Chain Bracketing Problem.
+
+- `time_to_solve <s>`  
+   Time limit in seconds for the runtime of the Branch & Bound solvers.
+
+- `seed <rng>`  
+   Seed for the random number generator in the Jabobian chain generator for reproducibility.
+
+- `amount <n>`  
+   Number of chains to generate and solve. Only used by `jcdp_batch`.

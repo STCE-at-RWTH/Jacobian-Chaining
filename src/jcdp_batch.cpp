@@ -1,3 +1,15 @@
+/******************************************************************************
+ * @file jcdp_batch.cpp
+ *
+ * @brief This file is part of the JCDP package. It provides an application that
+ *        generated multiple Jacobian chains and runs all available solvers on
+ *        them. The makespan of the calculated sequences are stored in CSV
+ *        files. The generator and solver properties can be provided via a
+ *        config files that is expected as the first command line argument.
+ ******************************************************************************/
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
+
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -9,6 +21,8 @@
 #include "jcdp/optimizer/dynamic_programming.hpp"
 #include "jcdp/scheduler/branch_and_bound.hpp"
 #include "jcdp/scheduler/priority_list.hpp"
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> APPLICATION <<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 int main(int argc, char* argv[]) {
    jcdp::JacobianChainGenerator jcgen;
@@ -95,6 +109,7 @@ int main(int argc, char* argv[]) {
             std::print(out, "{},", dp_makespan);
             std::print(out, "{}{}", dp_seq.makespan(), (t < len) ? "," : "\n");
          }
+
          out.flush();
       }
 

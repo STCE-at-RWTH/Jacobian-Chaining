@@ -3,7 +3,6 @@ size_range 5 500
 dag_size_range 1000 100000
 tangent_factor_range 1 1
 adjoint_factor_range 1 1
-density_range 0.1 0.3
 available_threads 3
 available_memory 0
 matrix_free 1

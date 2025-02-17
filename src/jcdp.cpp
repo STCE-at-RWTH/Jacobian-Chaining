@@ -7,6 +7,8 @@
  *        a list scheduler and a Branch & Bound scheduler.
  ******************************************************************************/
 
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
+
 #include <chrono>
 #include <filesystem>
 #include <iostream>
@@ -21,6 +23,8 @@
 #include "jcdp/scheduler/priority_list.hpp"
 #include "jcdp/sequence.hpp"
 #include "jcdp/util/dot_writer.hpp"
+
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> APPLICATION <<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 int main(int argc, char* argv[]) {
    jcdp::JacobianChainGenerator jcgen;
