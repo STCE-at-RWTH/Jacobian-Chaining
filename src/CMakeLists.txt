@@ -24,4 +24,4 @@ if(WIN32)
   add_cxx_flag("/EHsc" EHSC jcdp jcdp_batch)
 endif()
 
-install(TARGETS jcdp jcdp_batch)
+install(TARGETS jcdp jcdp_batch DESTINATION .)
