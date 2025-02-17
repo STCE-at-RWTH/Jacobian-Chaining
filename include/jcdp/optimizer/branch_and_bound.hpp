@@ -157,20 +157,21 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
          assert(!eliminations[elim_idx][1].has_value());
 
          Sequence final_sequence = sequence;
+         const std::shared_ptr<scheduler::Scheduler> scheduler = m_scheduler;
 
          // Start new task for the scheduling of the final sequence. If
          // branch & bound is used, this can take some time.
           #pragma omp task default(shared) \
-                          firstprivate(final_sequence, m_scheduler)
+                          firstprivate(final_sequence, scheduler)
          {
             const double time_to_schedule = remaining_time();
             if (time_to_schedule) {
-               m_scheduler->set_timer(time_to_schedule);
+               scheduler->set_timer(time_to_schedule);
 
-               const std::size_t new_makespan = m_scheduler->schedule(
+               const std::size_t new_makespan = scheduler->schedule(
                     final_sequence, m_usable_threads, m_makespan);
 
-               m_timer_expired |= !m_scheduler->finished_in_time();
+               m_timer_expired |= !scheduler->finished_in_time();
 
                #pragma omp atomic
                m_leafs++;
