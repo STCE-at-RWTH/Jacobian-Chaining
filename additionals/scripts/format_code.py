@@ -207,7 +207,7 @@ def sigint_handler(
 
 
 # -------------------------------------------------------------------- #
-def main() -> None:
+def main() -> int:
     """Run code formatter."""
     if opts.all:
         repository_root = Path(__file__).parent.parent.parent.resolve()
@@ -250,8 +250,8 @@ def main() -> None:
     for future in as_completed(future_results):
         exit_code = future.result() if exit_code == 0 else exit_code
 
-    sys.exit(exit_code)
+    return exit_code
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
