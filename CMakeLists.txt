@@ -41,6 +41,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/")
 set(JCDP_CMAKE_DIR "${PROJECT_SOURCE_DIR}/additionals/cmake")
 set(JCDP_IWYU_DIR "${PROJECT_SOURCE_DIR}/additionals/iwyu")
 set(JCDP_CONFIG_DIR "${PROJECT_SOURCE_DIR}/additionals/configs")
+set(JCDP_SCRIPT_DIR "${PROJECT_SOURCE_DIR}/additionals/scripts")
 
 # Include CMake modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${JCDP_CMAKE_DIR}")
@@ -95,9 +96,10 @@ add_subdirectory(include)
 add_subdirectory(src)
 
 # **************************************************************************** #
-# Build documentation
+# Install targets
 # **************************************************************************** #
-# add_subdirectory(docs)
+install(DIRECTORY ${JCDP_CONFIG_DIR} DESTINATION .)
+install(DIRECTORY ${JCDP_SCRIPT_DIR} DESTINATION . FILES_MATCHING PATTERN "*.py")
 
 # **************************************************************************** #
 # Summary

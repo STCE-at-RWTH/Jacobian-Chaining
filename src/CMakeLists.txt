@@ -23,3 +23,5 @@ jcdp_link_openmp_runtime(PRIVATE jcdp jcdp_batch)
 if(WIN32)
   add_cxx_flag("/EHsc" EHSC jcdp jcdp_batch)
 endif()
+
+install(TARGETS jcdp jcdp_batch)
