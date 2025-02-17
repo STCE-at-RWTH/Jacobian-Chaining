@@ -34,7 +34,7 @@ Example uses:
 
 
 # -------------------------------------------------------------------- #
-def main(input_file: str, output_file: str) -> int:
+def main(input_file: str, output_file: str|None) -> int:
     """Run the plot generator."""
 
     # Read the data into a DataFrame
@@ -139,7 +139,10 @@ if __name__ == "__main__":
         help="Path to the CSV file.",
     )
     parser.add_argument(
-        "output_file", type=str, help="Path to save the output file."
+        "output_file",
+        nargs="?",
+        default=None,
+        help="Path to save the output file (optional).",
     )
     opts = parser.parse_args()
 

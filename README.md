@@ -95,3 +95,17 @@ The config files are checked for the following key-value pairs:
 
 - `amount <n>`  
    Number of chains to generate and solve. Only used by `jcdp_batch`.
+
+## Statistical benchmarks
+
+To run the statistical benchmarks, use for example the config file at `additionals/configs/config_batch_small.in`:
+
+```shell
+./build/bin/jcdp_batch ./additionals/configs/config_batch_small.in
+```
+
+After the program finish there should be three new files: `results3.csv`, `results4.csv`, and `results5.csv`. These can be passed to the plotting scripts to generate the boxplots:
+
+```shell
+./additionals/scripts/generate_plots.py ./results5.csv
+```
