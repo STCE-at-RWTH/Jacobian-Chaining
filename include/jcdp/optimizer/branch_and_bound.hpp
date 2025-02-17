@@ -130,7 +130,7 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
             chain.revert(op);
          }
       } else {
-         // Copy for spawned task
+         // Copies for spawned task (Necessary on Windows)
          Sequence task_sequence = sequence;
          JacobianChain task_chain = chain;
          std::vector<OpPair> task_eliminations = eliminations;
@@ -156,12 +156,15 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
          assert(!eliminations[elim_idx][0].has_value());
          assert(!eliminations[elim_idx][1].has_value());
 
+         // Start new task for the scheduling of the final sequence. If
+         // branch & bound is used as the scheduling algorithm, this can take
+         // some time.
+
+         // Copies for spawned task (Necessary on Windows)
          Sequence final_sequence = sequence;
          const std::shared_ptr<scheduler::Scheduler> scheduler = m_scheduler;
 
-         // Start new task for the scheduling of the final sequence. If
-         // branch & bound is used, this can take some time.
-          #pragma omp task default(shared) \
+         #pragma omp task default(shared) \
                           firstprivate(final_sequence, scheduler)
          {
             const double time_to_schedule = remaining_time();
