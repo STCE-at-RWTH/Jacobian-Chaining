@@ -11,7 +11,6 @@ from __future__ import annotations
 import sys
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mtick
 import seaborn as sns
 import argparse
 
@@ -34,7 +33,7 @@ Example uses:
 
 
 # -------------------------------------------------------------------- #
-def main(input_file: str, output_file: str|None) -> int:
+def main(input_file: str, output_file: str | None) -> int:
     """Run the plot generator."""
 
     # Read the data into a DataFrame
@@ -56,11 +55,9 @@ def main(input_file: str, output_file: str|None) -> int:
         filtered_df = df[df[finished_col] == 1]
 
         # Calculate BNB/Dp ratios for valid entries and add to lists
-        valid_ratios = (
-            filtered_df[bnb_col].astype(float)
-            / filtered_df[dp_col].astype(float)
-            * 100
-        )
+        valid_ratios = filtered_df[bnb_col].astype(float) / filtered_df[
+            dp_col
+        ].astype(float)
 
         if not valid_ratios.empty:
             ratios.extend(valid_ratios.dropna().tolist())
@@ -76,31 +73,31 @@ def main(input_file: str, output_file: str|None) -> int:
             min_ratio="min",
             mean_ratio="mean",
             count="count",
-            count_100=lambda x: (x == 100).sum(),
+            count_100=lambda x: (x == 1).sum(),
         )
         .reset_index()
     )
     summary["perc_100"] = summary["count_100"] / summary["count"] * 100
     for _, row in summary.iterrows():
         print(
-            f"Threads {row['Threads']}: min = {row['min_ratio']:.2f}, "
-            f"average = {row['mean_ratio']:.2f}, "
-            f"percentage of optimal schedules = {row['perc_100']:.2f}%"
+            f"Threads {row['Threads']}: min = {row['min_ratio']:.3f}, "
+            f"average = {row['mean_ratio']:.3f}, "
+            f"percentage of optimal schedules = {row['perc_100']:.1f}%"
         )
 
     # Plotting using seaborn
     plt.rcParams.update(
         {
-            "font.size": 12,
+            "font.size": 10,
             "text.usetex": True,
             "font.family": "serif",
             "text.latex.preamble": r"\usepackage{lmodern}",
+            "axes.titlesize": 10,
         }
     )
-    plt.figure(figsize=(4.5, 3.5))
-    plt.axes().yaxis.set_major_formatter(mtick.PercentFormatter())
-    plt.ylim(65, 105)
-    plt.axhline(y=100, color="gray", linestyle="--")
+    plt.figure(figsize=(3.5 * 0.98, 2.04))
+    plt.ylim(0.65, 1.05)
+    plt.axhline(y=1, color="gray", linestyle="--")
 
     sns.boxplot(
         x="Threads",
@@ -120,7 +117,8 @@ def main(input_file: str, output_file: str|None) -> int:
     plt.tight_layout()
     if output_file:
         plt.savefig(output_file)
-    plt.show()
+    else:
+        plt.show()
 
     return 0
 
