@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15373160.svg)](https://doi.org/10.5281/zenodo.15373160)
+
 # Jacobian Chaining
 
 This repository contains a reference implementation which solves various versions of the Jacobian Chain Bracketing Problem. The solver can handle matrix-free, limited-memory and scheduled versions of the problem. There is a dynamic programming algorithm which will solve the computationally tractable problems and will act as aheuristic for the NP-complete scheduled variant. A second branch & bound algorithm can be used to find the global optimum for all variants.
