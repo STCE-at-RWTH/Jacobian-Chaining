@@ -94,6 +94,7 @@ add_subdirectory(include)
 # Compile sources
 # **************************************************************************** #
 add_subdirectory(src)
+add_subdirectory(examples)
 
 # **************************************************************************** #
 # Install targets
