@@ -63,14 +63,15 @@ option(JCDP_USE_OPENMP
 # **************************************************************************** #
 include(build_types)
 include(cxx_standard_library)
+include(compiler_flags)
+include(openmp_backend)
+
 include(enable_intrinsics)
 include(enable_position_independent_code)
 include(enable_sanitation)
-include(compiler_flags)
 include(include_what_you_use)
 include(cpplint)
 include(configure_compiler_warnings)
-include(openmp_backend)
 
 # **************************************************************************** #
 # Find necessary packages
