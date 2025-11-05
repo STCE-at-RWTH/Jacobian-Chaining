@@ -78,6 +78,12 @@ if(JCDP_USE_OPENMP)
       add_subdirectory(${openmp_SOURCE_DIR} ${openmp_BINARY_DIR})
       print_divide(EMPTY_AFTER)
     endif()
+
+    # Need explicit -pthread flag to enable threading support in Emscripten
+    if(EMSCRIPTEN)
+      target_compile_options(omp PRIVATE -pthread)
+      target_link_options(omp PRIVATE -pthread)
+    endif()
   else()
     # Check if the include directory exists if it is defined
     if(JCDP_OPENMP_INCLUDE_DIR)
@@ -173,6 +179,11 @@ function(jcdp_compile_with_openmp visibility targets)
 
     if(JCDP_USE_OPENMP)
       target_compile_options(${tgt} ${visibility} ${OpenMP_CXX_FLAGS})
+
+      # Need explicit -pthread flag to enable threading support in Emscripten
+      if(EMSCRIPTEN)
+        target_compile_options(${tgt} ${visibility} -pthread)
+      endif()
     else()
       add_cxx_flag("-Wno-unknown-pragmas" WNO_UNKNOWN_PRAGMAS ${tgt})
     endif()
@@ -206,6 +217,11 @@ function(jcdp_link_openmp_runtime visibility targets)
 
     if(JCDP_USE_OPENMP)
       target_link_libraries(${tgt} ${visibility} ${OpenMP_CXX_LIBRARIES})
+
+      # Need explicit -pthread flag to enable threading support in Emscripten
+      if(EMSCRIPTEN)
+        target_link_options(${tgt} ${visibility} -pthread)
+      endif()
       if(OpenMP_CXX_LIBRARY_DIR)
         target_link_directories(${tgt} PRIVATE ${OpenMP_CXX_LIBRARY_DIR})
       endif()
