@@ -14,25 +14,27 @@
 #include <algorithm>
 #include <cstddef>
 #include <map>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 
-#include <nlohmann/json.hpp>
-
 #include "jcdp/jacobian.hpp"
 #include "jcdp/jacobian_chain.hpp"
+#include "jcdp/sequence.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 namespace jcdp::util {
 
 /**
- * @brief Creates a JacobianChain from a serialized JSON string in the JSON graph format.
+ * @brief Creates a JacobianChain from a serialized JSON string in the JSON
+ * graph format.
  *
  * @param json_str The JSON string representing the graph.
  * @return JacobianChain The constructed Jacobian chain.
  */
-inline auto jacobian_chain_from_json(const std::string& json_str) -> JacobianChain {
+inline auto jacobian_chain_from_json(const std::string& json_str)
+     -> JacobianChain {
    using json = nlohmann::json;
    auto j = json::parse(json_str);
 
@@ -59,7 +61,9 @@ inline auto jacobian_chain_from_json(const std::string& json_str) -> JacobianCha
       }
    }
 
-   const auto& edges = graph.contains("edges") ? graph["edges"] : (graph.is_array() ? graph : json::array());
+   const auto& edges = graph.contains("edges") ?
+                            graph["edges"] :
+                            (graph.is_array() ? graph : json::array());
 
    for (const auto& edge : edges) {
       Jacobian jac;
@@ -136,10 +140,11 @@ inline auto jacobian_chain_from_json(const std::string& json_str) -> JacobianCha
    }
 
    // Sort by index i to ensure correct order for the chain
-   std::sort(chain.elemental_jacobians.begin(), chain.elemental_jacobians.end(),
-             [](const Jacobian& a, const Jacobian& b) {
-                return a.i < b.i;
-             });
+   std::sort(
+        chain.elemental_jacobians.begin(), chain.elemental_jacobians.end(),
+        [](const Jacobian& a, const Jacobian& b) {
+           return a.i < b.i;
+        });
 
    // Initialize subchains
    chain.init_subchains();
@@ -147,6 +152,47 @@ inline auto jacobian_chain_from_json(const std::string& json_str) -> JacobianCha
    return chain;
 }
 
-} // namespace jcdp::util
+/**
+ * @brief Serializes a Sequence into a JSON string.
+ *
+ * @param seq The sequence to serialize.
+ * @return std::string The JSON string.
+ */
+inline auto sequence_to_json(const Sequence& seq) -> std::string {
+   using json = nlohmann::json;
+   json j = json::array();
 
-#endif // JCDP_UTIL_JSON_HPP_
+   for (const auto& op : seq) {
+      json step;
+      step["kind"] = "face";
+
+      std::vector<std::string> indices;
+      if (op.action == Action::ACCUMULATION) {
+         if (op.mode == Mode::TANGENT) {
+            step["method"] = "acc-tan";
+         } else {
+            step["method"] = "acc-adj";
+         }
+         indices.push_back(std::to_string(op.i));
+         indices.push_back(std::to_string(op.j));
+      } else {
+         if (op.action == Action::MULTIPLICATION) {
+            step["method"] = "elim-mul";
+         } else if (op.mode == Mode::TANGENT) {
+            step["method"] = "elim-tan";
+         } else {
+            step["method"] = "elim-adj";
+         }
+         indices.push_back(std::to_string(op.i));
+         indices.push_back(std::to_string(op.k));
+         indices.push_back(std::to_string(op.j));
+      }
+      step["indices"] = indices;
+      j.push_back(step);
+   }
+   return j.dump();
+}
+
+}  // namespace jcdp::util
+
+#endif  // JCDP_UTIL_JSON_HPP_

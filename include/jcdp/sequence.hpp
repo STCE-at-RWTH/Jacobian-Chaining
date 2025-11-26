@@ -176,9 +176,10 @@ class Sequence : public std::deque<Operation> {
    }
 
    inline static auto make_max() -> Sequence {
-      return Sequence(Operation {
-           .fma = std::numeric_limits<std::size_t>::max(),
-           .is_scheduled = true});
+      return Sequence(
+           Operation {
+                .fma = std::numeric_limits<std::size_t>::max(),
+                .is_scheduled = true});
    }
 };
 

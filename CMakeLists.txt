@@ -53,8 +53,14 @@ print_title("${JCDP_PROJECT_DESCRIPTION}" EMPTY_BEFORE EMPTY_AFTER)
 # **************************************************************************** #
 # CMake options
 # **************************************************************************** #
+option(JCDP_STATIC_LIBS
+  "Whether to create a static JCDP library." ON)
+option(JCDP_SHARED_LIBS
+  "Whether to create a shared JCDP library." ON)
 option(JCDP_USE_OPENMP
   "Whether to use OpenMP." ON)
+option(JCDP_INSTALL_ADDITIONALS
+  "Whether to install additional files (configs, scripts, etc.)." ON)
 # option(JCDP_BUILD_DOXYGEN
 #   "Whether to build the Doxygen documentation." OFF)
 
@@ -93,12 +99,17 @@ add_subdirectory(include)
 # Compile sources
 # **************************************************************************** #
 add_subdirectory(src)
+if(NOT EMSCRIPTEN)
+   add_subdirectory(examples)
+endif()
 
 # **************************************************************************** #
 # Install targets
 # **************************************************************************** #
-install(DIRECTORY ${JCDP_CONFIG_DIR} DESTINATION .)
-install(FILES ${JCDP_SCRIPT_DIR}/generate_plots.py DESTINATION .)
+if(JCDP_INSTALL_ADDITIONALS)
+   install(DIRECTORY ${JCDP_CONFIG_DIR} DESTINATION .)
+   install(FILES ${JCDP_SCRIPT_DIR}/generate_plots.py DESTINATION bin)
+endif()
 
 # **************************************************************************** #
 # Summary

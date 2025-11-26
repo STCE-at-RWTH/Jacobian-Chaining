@@ -75,7 +75,7 @@ if(JCDP_USE_OPENMP)
       cmake_policy(POP)
 
       print_subtitle("Configuring OpenMP" EMPTY_BEFORE)
-      add_subdirectory(${openmp_SOURCE_DIR} ${openmp_BINARY_DIR})
+      add_subdirectory(${openmp_SOURCE_DIR} ${openmp_BINARY_DIR} EXCLUDE_FROM_ALL)
       print_divide(EMPTY_AFTER)
     endif()
 

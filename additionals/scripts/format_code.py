@@ -21,6 +21,7 @@ import signal
 
 from typing import Optional
 from types import FrameType
+import tempfile
 
 description = """\
 Uses clang-format to format a source file. Applies some pre- and
@@ -62,6 +63,11 @@ parser.add_argument(
     help="Create new files",
 )
 parser.add_argument(
+    "--stdin",
+    action="store_true",
+    help="Create new files",
+)
+parser.add_argument(
     "-a",
     "--all",
     action="store_true",
@@ -85,6 +91,12 @@ parser.add_argument(
     "--dry-run",
     action="store_true",
     help="Just check if files need formatting",
+)
+parser.add_argument(
+    "--style",
+    action="store",
+    help="Style argument for clang-format",
+    default=f"file:{Path(__file__).parent.parent.parent.resolve()}/.clang-format",
 )
 parser.add_argument(
     "-Werror",
@@ -122,43 +134,44 @@ def _format_file(filename: str) -> int:
     # Preprocess ...
     with open(filename, "r") as source:
         lines = source.readlines()
-    with open(output_file, "w") as source:
+
+    # Create a temporary file for preprocessing
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=Path(filename).suffix, delete=False
+    ) as temp_file:
+        temp_filename = temp_file.name
         for line in lines:
             # ... comment out OpenMP pragmas
-            line = re.sub(r"#pragma omp", "//#pragma omp", line)
+            line = re.sub(r"#pragma omp", "// #pragma omp", line)
             # ... comment out multiple case statements
             line = re.sub(r"case (.*?):( +)(.*):", "case \\1: /*\\3:*/", line)
-            source.write(line)
+            temp_file.write(line)
 
     clang_format_call = "clang-format -i --Wno-error=unknown "
-    if not opts.silent:
+    if not opts.silent and not opts.dry_run:
         clang_format_call += "--verbose "
     if opts.dry_run:
         clang_format_call += "--dry-run "
     if opts.Werror:
         clang_format_call += "--Werror "
+    if opts.style:
+        clang_format_call += f"--style={opts.style} "
 
     # Call clang-format (ignore interupt signals)
     result = run(
-        clang_format_call + output_file, shell=True, stdout=PIPE, stderr=PIPE
+        clang_format_call + temp_filename, shell=True, stdout=PIPE, stderr=PIPE
     )
 
-    # Postprocess ...
-    lines = []
-    with open(output_file, "r") as source:
-        line = source.read().strip("\n")
-        # global rexex
-        if not opts.dry_run:
-            a = re.findall(r"^( *),\n( *)(.*)", line, flags=re.MULTILINE)
-            if len(a):
-                line = re.sub(
-                    r"^( *),\n( *)(.*)", "\\1, \\3", line, flags=re.MULTILINE
-                )
-        lines = [s + "\n" for s in line.split("\n")]  # split and readd '\n'
+    if not opts.dry_run:
+        # Postprocess ...
+        lines = []
+        with open(temp_filename, "r") as source:
+            line = source.read().strip("\n")
+            lines = [
+                s + "\n" for s in line.split("\n")
+            ]  # split and readd '\n'
 
-    with open(output_file, "w") as source:
-        # single line regEx
-        for line in lines:
+        for line, idx in zip(lines, range(len(lines))):
             # ... comment in OpenMP pragmas
             line = re.sub(r"\/\/ *#pragma omp", "#pragma omp", line)
             # ... comment in multiple case statements
@@ -167,10 +180,28 @@ def _format_file(filename: str) -> int:
                 "case \\1: case \\3:",
                 line,
             )
-            source.write(line)
+            lines[idx] = line
+
+        if opts.stdin:
+            result.stdout = "".join(lines).encode("utf-8")
+        else:
+            with open(output_file, "w") as source:
+                source.writelines(lines)
+
+    # Remove temporary file
+    os.remove(temp_filename)
+
+    # Replace filename in stderr output
+    result.stderr = re.sub(
+        temp_filename.encode("utf-8"),
+        filename.encode("utf-8"),
+        result.stderr,
+    )
 
     # Atomic write
-    sys.stdout.write(result.stderr.decode("utf-8"))
+    if opts.stdin:
+        sys.stdout.write(result.stdout.decode("utf-8"))
+    sys.stderr.write(result.stderr.decode("utf-8"))
 
     # Return the exit code of clang-format
     return result.returncode

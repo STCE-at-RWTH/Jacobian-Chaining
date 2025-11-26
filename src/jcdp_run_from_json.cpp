@@ -8,12 +8,10 @@
  ******************************************************************************/
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
-
-#include <chrono>
+#include <cstdint>
+#include <cstring>
 #include <iostream>
 #include <memory>
-#include <cstdint>
-#include <omp.h>
 
 #include "jcdp/jacobian_chain.hpp"
 #include "jcdp/optimizer/branch_and_bound.hpp"
@@ -25,104 +23,10 @@
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> APPLICATION <<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
-extern "C" {
-
-uint32_t jcdp_run_dp_bnb_from_json(char* json_str, uint32_t threads, uint32_t memory) {
-   jcdp::JacobianChain chain;
-   try {
-      chain = jcdp::util::jacobian_chain_from_json(json_str);
-      chain.init_subchains();
-   } catch (const std::exception& e) {
-      std::println(std::cerr, "JSON parsing error: {}", e.what());
-      return false;
-   }
-
-   jcdp::optimizer::DynamicProgrammingOptimizer dp_solver;
-   dp_solver.set_available_threads(threads);
-   dp_solver.set_available_memory(memory);
-
-   std::shared_ptr<jcdp::scheduler::BranchAndBoundScheduler> bnb_scheduler =
-        std::make_shared<jcdp::scheduler::BranchAndBoundScheduler>();
-
-   // DP Solve
-   dp_solver.init(chain);
-   jcdp::Sequence dp_seq = dp_solver.solve();
-
-   // BnB Schedule
-   bnb_scheduler->schedule(dp_seq, dp_solver.m_usable_threads);
-
-   return 0;
-}
-
-uint32_t jcdp_run_bnb_list_from_json(char* json_str, uint32_t threads, uint32_t memory, uint32_t time_to_solve) {
-   jcdp::JacobianChain chain;
-   try {
-      chain = jcdp::util::jacobian_chain_from_json(json_str);
-      chain.init_subchains();
-   } catch (const std::exception& e) {
-      std::println(std::cerr, "JSON parsing error: {}", e.what());
-      return false;
-   }
-
-   // Run DP for Upper Bound
-   jcdp::optimizer::DynamicProgrammingOptimizer dp_solver;
-   dp_solver.set_available_threads(threads);
-   dp_solver.set_available_memory(memory);
-   dp_solver.init(chain);
-   jcdp::Sequence dp_seq = dp_solver.solve();
-
-   // BnB Solve with List Scheduler
-   jcdp::optimizer::BranchAndBoundOptimizer bnb_solver;
-   bnb_solver.set_available_threads(threads);
-   bnb_solver.set_available_memory(memory);
-   bnb_solver.set_timer(time_to_solve);
-
-   std::shared_ptr<jcdp::scheduler::PriorityListScheduler> scheduler =
-        std::make_shared<jcdp::scheduler::PriorityListScheduler>();
-
-   bnb_solver.init(chain, scheduler);
-   bnb_solver.set_upper_bound(dp_seq.makespan());
-
-   jcdp::Sequence bnb_seq = bnb_solver.solve();
-
-   return 0;
-}
-
-uint32_t jcdp_run_bnb_bnb_from_json(char* json_str, uint32_t threads, uint32_t memory, uint32_t time_to_solve) {
-   jcdp::JacobianChain chain;
-   try {
-      chain = jcdp::util::jacobian_chain_from_json(json_str);
-      chain.init_subchains();
-   } catch (const std::exception& e) {
-      std::println(std::cerr, "JSON parsing error: {}", e.what());
-      return false;
-   }
-
-   // Run DP for Upper Bound
-   jcdp::optimizer::DynamicProgrammingOptimizer dp_solver;
-   dp_solver.set_available_threads(threads);
-   dp_solver.set_available_memory(memory);
-   dp_solver.init(chain);
-   jcdp::Sequence dp_seq = dp_solver.solve();
-
-   // BnB Solve with List Scheduler
-   jcdp::optimizer::BranchAndBoundOptimizer bnb_solver;
-   bnb_solver.set_available_threads(threads);
-   bnb_solver.set_available_memory(memory);
-   bnb_solver.set_timer(time_to_solve);
-
-   std::shared_ptr<jcdp::scheduler::BranchAndBoundScheduler> scheduler =
-        std::make_shared<jcdp::scheduler::BranchAndBoundScheduler>();
-
-   bnb_solver.init(chain, scheduler);
-   bnb_solver.set_upper_bound(dp_seq.makespan());
-
-   jcdp::Sequence bnb_seq = bnb_solver.solve();
-
-   return 0;
-}
-
-uint32_t jcdp_run_from_json(const char* json_str, const char* optimizer, const char* scheduler, uint32_t threads, uint32_t memory, uint32_t time_to_solve) {
+extern "C" uint32_t jcdp_run_from_json(
+     const char* json_str, const char* optimizer, const char* scheduler,
+     uint32_t threads, uint32_t memory, uint32_t time_to_solve,
+     char* result_buffer) {
    jcdp::JacobianChain chain;
    try {
       chain = jcdp::util::jacobian_chain_from_json(json_str);
@@ -130,6 +34,11 @@ uint32_t jcdp_run_from_json(const char* json_str, const char* optimizer, const c
    } catch (const std::exception& e) {
       std::println(std::cerr, "JSON parsing error: {}", e.what());
       return 1;
+   }
+
+   if (!result_buffer) {
+      std::println(std::cerr, "No result buffer provided for output.");
+      return 2;
    }
 
    std::shared_ptr<jcdp::scheduler::PriorityListScheduler> list_scheduler =
@@ -150,11 +59,12 @@ uint32_t jcdp_run_from_json(const char* json_str, const char* optimizer, const c
       bnb_scheduler->schedule(dp_seq, dp_solver.m_usable_threads);
    } else {
       std::println(std::cerr, "Unknown scheduler: {}", scheduler);
-      return 2;
+      return 3;
    }
 
    if (std::string(optimizer) == "dp") {
-      // Just return the DP solution
+      std::string json = jcdp::util::sequence_to_json(dp_seq);
+      std::strcpy(result_buffer, json.c_str());
       return 0;
    } else if (std::string(optimizer) != "bnb") {
       std::println(std::cerr, "Unknown optimizer: {}", optimizer);
@@ -174,8 +84,8 @@ uint32_t jcdp_run_from_json(const char* json_str, const char* optimizer, const c
 
    bnb_solver.set_upper_bound(dp_seq.makespan());
    jcdp::Sequence bnb_seq = bnb_solver.solve();
+   std::string json = jcdp::util::sequence_to_json(bnb_seq);
+   std::strcpy(result_buffer, json.c_str());
 
    return 0;
-}
-
 }
