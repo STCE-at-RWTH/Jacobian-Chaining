@@ -63,6 +63,14 @@ class Optimizer : public util::Properties {
 
    std::size_t m_usable_threads {0};
 
+   inline auto set_available_threads(std::size_t threads) -> void {
+      m_available_threads = threads;
+   }
+
+   inline auto set_available_memory(std::size_t memory) -> void {
+      m_available_memory = memory;
+   }
+
  protected:
    std::size_t m_length {0};
    bool m_matrix_free {false};

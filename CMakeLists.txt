@@ -76,9 +76,7 @@ include(configure_compiler_warnings)
 # **************************************************************************** #
 # Find necessary packages
 # **************************************************************************** #
-# if(JCDP_BUILD_DOXYGEN)
-#   find_package(Doxygen REQUIRED dot OPTIONAL_COMPONENTS dia mscgen)
-# endif()
+find_package(nlohmann_json REQUIRED)
 
 # **************************************************************************** #
 # JCDP include directories
