@@ -39,10 +39,22 @@ struct Jacobian {
 
    //! Amount of edges in the DAG of the primal function (~ size of tape).
    std::size_t edges_in_dag {0};
-   //! Cost of a single tangent evaluation (y^(1) = F' * x^(1)).
+   //! Cost of a single passive evaluation (y = F'(x)).
+   std::size_t passive_cost {0};
+   //! Cost of a single tangent evaluation ([y, y^(1)] = [F(x), F' * x^(1)]).
    std::size_t tangent_cost {0};
+   //! Cost of a single recording evaluation ([y, G] = [F(x), F->(x)]).
+   std::size_t recording_cost {0};
+   //! Cost of a single interpretation evaluation (x_(1) = F<-(G, y_(1))]).
+   std::size_t interpretation_cost {0};
    //! Cost of a single adjoint evaluation (x_(1) = y_(1) * F').
    std::size_t adjoint_cost {0};
+
+   //! Whether the primal is already evaluated or not.
+   bool is_evaluated {false};
+
+   //! Whether the Jacobian is already recorded or not.
+   bool is_recorded {false};
 
    //! Whether the Jacobian is already accumulated or not.
    bool is_accumulated {false};
@@ -55,8 +67,10 @@ struct Jacobian {
         -> std::size_t {
       if constexpr (mode == Mode::ADJOINT) {
          return evals.value_or(m) * adjoint_cost;
-      } else {
+      } else if constexpr (mode == Mode::TANGENT){
          return evals.value_or(n) * tangent_cost;
+      } else {
+         return passive_cost;
       }
    }
 };

@@ -46,6 +46,9 @@ class Optimizer : public util::Properties {
            m_available_threads, "available_threads",
            "Amount of threads that are available for the evaluation of the "
            "jacobian chain.");
+      register_property(
+           m_joint_reversal, "joint_reversal",
+           "Wether we optimize the allow joint reversal for sub chains.");
    }
 
    virtual ~Optimizer() = default;
@@ -68,6 +71,7 @@ class Optimizer : public util::Properties {
    bool m_matrix_free {false};
    bool m_banded {false};
    bool m_sparse {false};
+   bool m_joint_reversal {false};
    std::size_t m_available_memory {0};
    std::size_t m_available_threads {0};
 

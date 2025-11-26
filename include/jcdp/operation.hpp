@@ -28,10 +28,11 @@ enum class Action : std::uint8_t {
    NONE = 0,
    MULTIPLICATION,
    ACCUMULATION,
-   ELIMINATION
+   FORWARD_EVALUATION,
+   REVERSE_EVALUATION
 };
 
-enum class Mode : std::uint8_t { NONE = 0, TANGENT, ADJOINT };
+enum class Mode : std::uint8_t { NONE = 0, PASSIVE, TANGENT, ADJOINT };
 
 struct Operation {
    Action action {Action::NONE};
@@ -83,7 +84,7 @@ struct std::formatter<jcdp::Action> : public std::formatter<std::string_view> {
    }
 
    static constexpr std::array ACTION_STRINGS {
-        "   "sv, "MUL"sv, "ACC"sv, "ELI"sv};
+        "   "sv, "MUL"sv, "ACC"sv, "FWD"sv, "REV"sv};
 };
 
 template<>
@@ -95,7 +96,7 @@ struct std::formatter<jcdp::Mode> : public std::formatter<std::string_view> {
            MODE_STRINGS[static_cast<std::size_t>(mode)], ctx);
    }
 
-   static constexpr std::array MODE_STRINGS {"   "sv, "TAN"sv, "ADJ"sv};
+   static constexpr std::array MODE_STRINGS {"   "sv, "PAS"sv, "TAN"sv, "ADJ"sv};
 };
 
 template<>
@@ -124,7 +125,7 @@ struct std::formatter<jcdp::Operation> {
                  op.mode, op.i, op.j + 1, op.thread, op.start_time,
                  op.start_time + op.fma, op.fma);
          }
-      }
+      } else if (op.action)
 
       return std::format_to(
            ctx.out(), "{} {} ({:2} {:2} {:2}) [{}: {} - {}] {}", op.action,
