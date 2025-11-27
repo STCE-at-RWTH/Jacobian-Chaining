@@ -66,13 +66,13 @@ if(EMSCRIPTEN)
 
    # Copy the WASM artifacts
    add_custom_command(TARGET create_npm_package POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E make_directory ${NPM_PACKAGE_DIR}/jcdp
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${NPM_PACKAGE_DIR}/lib
       COMMAND ${CMAKE_COMMAND} -E copy
          "$<TARGET_FILE_DIR:${jcdp_lib_name}_wasm>/${jcdp_lib_name}.js"
-         "${NPM_PACKAGE_DIR}/jcdp/"
+         "${NPM_PACKAGE_DIR}/lib/"
       COMMAND ${CMAKE_COMMAND} -E copy
          "$<TARGET_FILE_DIR:${jcdp_lib_name}_wasm>/${jcdp_lib_name}.wasm"
-         "${NPM_PACKAGE_DIR}/jcdp/"
+         "${NPM_PACKAGE_DIR}/lib/"
       COMMENT "Copying WASM artifacts to NPM package"
    )
 

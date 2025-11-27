@@ -1,6 +1,6 @@
 import { JCDPGraph, JCDPOptions, SequenceStep } from './types';
 
-const createModule = require('../jcdp/jcdp.js');
+const createModule = require('../lib/jcdp.js');
 
 let moduleInstance: any = null;
 async function getModule() {
