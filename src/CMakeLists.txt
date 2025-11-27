@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.25.0)
 cmake_policy(VERSION 3.25.0)
 
 find_package(nlohmann_json REQUIRED)
-set(jcdp_lib_files "jcdp_run_from_json.cpp")
+set(jcdp_lib_files "json_api.cpp")
 set(jcdp_lib_name "jcdp")
 set(jcdp_libs "")
 
@@ -37,11 +37,64 @@ if(EMSCRIPTEN)
    target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s EXPORT_NAME=createJCDPModule")
    target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=0")
    target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s PTHREAD_POOL_SIZE='navigator.hardwareConcurrency'")
-   target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s EXPORTED_FUNCTIONS='[\"_jcdp_run_from_config\", \"_jcdp_run_from_json\"]")
-   target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s EXPORTED_RUNTIME_METHODS='[\"ENV\",\"ccall\",\"cwrap\"]'")
+   target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s EXPORTED_RUNTIME_METHODS='[\"ENV\",\"ccall\",\"cwrap\",\"getValue\",\"UTF8ToString\"]'")
    target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s INITIAL_MEMORY=2147483648")
 
    list(APPEND jcdp_libs ${jcdp_lib_name}_wasm)
+
+   # Custom target to create the NPM package
+   set(NPM_PACKAGE_DIR "${CMAKE_BINARY_DIR}/package")
+
+   configure_file(
+      "${CMAKE_SOURCE_DIR}/additionals/package/package.json.in"
+      "${NPM_PACKAGE_DIR}/package.json"
+      @ONLY
+   )
+
+   add_custom_target(create_npm_package
+      DEPENDS ${jcdp_lib_name}_wasm
+      COMMENT "Creating NPM package..."
+   )
+
+   # Copy the package template
+   add_custom_command(TARGET create_npm_package POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${NPM_PACKAGE_DIR}
+      COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/additionals/package" ${NPM_PACKAGE_DIR}
+      COMMAND ${CMAKE_COMMAND} -E remove "${NPM_PACKAGE_DIR}/package.json.in"
+      COMMENT "Copying package template"
+   )
+
+   # Copy the WASM artifacts
+   add_custom_command(TARGET create_npm_package POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${NPM_PACKAGE_DIR}/jcdp
+      COMMAND ${CMAKE_COMMAND} -E copy
+         "$<TARGET_FILE_DIR:${jcdp_lib_name}_wasm>/${jcdp_lib_name}.js"
+         "${NPM_PACKAGE_DIR}/jcdp/"
+      COMMAND ${CMAKE_COMMAND} -E copy
+         "$<TARGET_FILE_DIR:${jcdp_lib_name}_wasm>/${jcdp_lib_name}.wasm"
+         "${NPM_PACKAGE_DIR}/jcdp/"
+      COMMENT "Copying WASM artifacts to NPM package"
+   )
+
+   find_program(NPM npm)
+   if(NPM)
+      add_custom_target(build_npm_package
+         DEPENDS create_npm_package
+         WORKING_DIRECTORY ${NPM_PACKAGE_DIR}
+         COMMAND ${NPM} install
+         COMMAND ${NPM} run build
+         COMMENT "Building NPM package"
+      )
+
+      add_custom_target(publish_npm_package
+         DEPENDS build_npm_package
+         WORKING_DIRECTORY ${NPM_PACKAGE_DIR}
+         COMMAND ${NPM} publish
+         COMMENT "Publishing NPM package"
+      )
+   endif()
+
+   install(DIRECTORY ${NPM_PACKAGE_DIR} DESTINATION .)
 endif()
 
 foreach(lib IN LISTS jcdp_libs)

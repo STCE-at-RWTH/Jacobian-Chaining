@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15373160.svg)](https://doi.org/10.5281/zenodo.15373160)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15373160.svg)](https://doi.org/10.5281/zenodo.15373160) ![NPM Version](https://img.shields.io/npm/v/jcdp)
 
 # Jacobian Chaining
 

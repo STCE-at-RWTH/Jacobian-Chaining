@@ -8,6 +8,9 @@
  ******************************************************************************/
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
+
+#include "jcdp/json_api.h"
+
 #include <cstdint>
 #include <cstring>
 #include <iostream>
@@ -21,12 +24,31 @@
 #include "jcdp/sequence.hpp"
 #include "jcdp/util/json.hpp"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#else
+#define EMSCRIPTEN_KEEPALIVE
+#endif
+
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> APPLICATION <<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
-extern "C" uint32_t jcdp_run_from_json(
+extern "C" {
+
+uint32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
      const char* json_str, const char* optimizer, const char* scheduler,
      uint32_t threads, uint32_t memory, uint32_t time_to_solve,
-     char* result_buffer) {
+     const char** result_buffer) {
+
+   // Static buffer to hold the result. This persists between calls, so we
+   // don't need to malloc/free manually from JS.
+   static std::string g_result_json;
+
+   // Clear previous result
+   g_result_json.clear();
+   if (result_buffer) {
+      *result_buffer = nullptr;
+   }
+
    jcdp::JacobianChain chain;
    try {
       chain = jcdp::util::jacobian_chain_from_json(json_str);
@@ -34,11 +56,6 @@ extern "C" uint32_t jcdp_run_from_json(
    } catch (const std::exception& e) {
       std::println(std::cerr, "JSON parsing error: {}", e.what());
       return 1;
-   }
-
-   if (!result_buffer) {
-      std::println(std::cerr, "No result buffer provided for output.");
-      return 2;
    }
 
    std::shared_ptr<jcdp::scheduler::PriorityListScheduler> list_scheduler =
@@ -59,12 +76,15 @@ extern "C" uint32_t jcdp_run_from_json(
       bnb_scheduler->schedule(dp_seq, dp_solver.m_usable_threads);
    } else {
       std::println(std::cerr, "Unknown scheduler: {}", scheduler);
-      return 3;
+      return 2;
    }
 
    if (std::string(optimizer) == "dp") {
-      std::string json = jcdp::util::sequence_to_json(dp_seq);
-      std::strcpy(result_buffer, json.c_str());
+      // Just return the DP solution
+      g_result_json = jcdp::util::sequence_to_json(dp_seq);
+      if (result_buffer) {
+         *result_buffer = g_result_json.c_str();
+      }
       return 0;
    } else if (std::string(optimizer) != "bnb") {
       std::println(std::cerr, "Unknown optimizer: {}", optimizer);
@@ -84,8 +104,12 @@ extern "C" uint32_t jcdp_run_from_json(
 
    bnb_solver.set_upper_bound(dp_seq.makespan());
    jcdp::Sequence bnb_seq = bnb_solver.solve();
-   std::string json = jcdp::util::sequence_to_json(bnb_seq);
-   std::strcpy(result_buffer, json.c_str());
+
+   g_result_json = jcdp::util::sequence_to_json(bnb_seq);
+   if (result_buffer) {
+      *result_buffer = g_result_json.c_str();
+   }
 
    return 0;
+}
 }

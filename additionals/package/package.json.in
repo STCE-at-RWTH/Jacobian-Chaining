@@ -1,0 +1,35 @@
+{
+  "name": "jcdp",
+  "version": "@JCDP_VERSION@",
+  "description": "WASM bindings for Jacobian Chain Dynamic Programming (JCDP)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "lib"
+  ],
+  "repository" : {
+    "type" : "git",
+    "url" : "git://github.com/STCE-at-RWTH/Jacobian-Chaining.git"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "jacobian",
+    "chaining",
+    "wasm",
+    "optimization"
+  ],
+  "author": {
+    "name": "Simon Maertens",
+    "email": "git@slmaertens.dev",
+    "url": "https://github.com/ACSimon33"
+  },
+  "license": "CC-BY-4.0",
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}
