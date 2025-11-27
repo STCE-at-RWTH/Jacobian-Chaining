@@ -9,12 +9,16 @@
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> INCLUDES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
-#include "jcdp/json_api.h"
-
 #include <cstdint>
 #include <cstring>
 #include <iostream>
 #include <memory>
+
+#include "jcdp/json_api.h"
+
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
 
 #include "jcdp/jacobian_chain.hpp"
 #include "jcdp/optimizer/branch_and_bound.hpp"
@@ -36,12 +40,17 @@ extern "C" {
 
 uint32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
      const char* json_str, const char* optimizer, const char* scheduler,
-     uint32_t threads, uint32_t memory, uint32_t time_to_solve,
+     uint32_t omp_threads, uint32_t available_threads,
+     uint32_t available_memory, uint32_t time_to_solve, bool matrix_free,
      const char** result_buffer) {
 
    // Static buffer to hold the result. This persists between calls, so we
    // don't need to malloc/free manually from JS.
    static std::string g_result_json;
+
+#if defined(_OPENMP)
+   omp_set_num_threads(omp_threads);
+#endif
 
    // Clear previous result
    g_result_json.clear();
@@ -64,8 +73,9 @@ uint32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
         std::make_shared<jcdp::scheduler::BranchAndBoundScheduler>();
 
    jcdp::optimizer::DynamicProgrammingOptimizer dp_solver;
-   dp_solver.set_available_threads(threads);
-   dp_solver.set_available_memory(memory);
+   dp_solver.set_available_threads(available_threads);
+   dp_solver.set_available_memory(available_memory);
+   dp_solver.set_matrix_free(matrix_free);
 
    // DP Solve (always run DP first to get an upper bound)
    dp_solver.init(chain);
@@ -74,7 +84,7 @@ uint32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
       list_scheduler->schedule(dp_seq, dp_solver.m_usable_threads);
    } else if (std::string(scheduler) == "bnb") {
       bnb_scheduler->schedule(dp_seq, dp_solver.m_usable_threads);
-   } else {
+   } else if (std::string(scheduler) != "none") {
       std::println(std::cerr, "Unknown scheduler: {}", scheduler);
       return 2;
    }
@@ -92,14 +102,18 @@ uint32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
    }
 
    jcdp::optimizer::BranchAndBoundOptimizer bnb_solver;
-   bnb_solver.set_available_threads(threads);
-   bnb_solver.set_available_memory(memory);
+   bnb_solver.set_available_threads(available_threads);
+   bnb_solver.set_available_memory(available_memory);
    bnb_solver.set_timer(time_to_solve);
+   bnb_solver.set_matrix_free(matrix_free);
 
    if (std::string(scheduler) == "list") {
       bnb_solver.init(chain, list_scheduler);
-   } else {
+   } else if (std::string(scheduler) == "bnb") {
       bnb_solver.init(chain, bnb_scheduler);
+   } else {
+      std::println(std::cerr, "Invalid scheduler: {}", scheduler);
+      return 4;
    }
 
    bnb_solver.set_upper_bound(dp_seq.makespan());

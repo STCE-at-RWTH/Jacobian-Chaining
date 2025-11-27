@@ -23,6 +23,7 @@
 #include "jcdp/scheduler/priority_list.hpp"
 #include "jcdp/sequence.hpp"
 #include "jcdp/util/dot_writer.hpp"
+#include "jcdp/util/json.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> APPLICATION <<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
@@ -62,6 +63,7 @@ int main(int argc, char* argv[]) {
    jcdp::JacobianChain chain;
    jcgen.next(chain);
    chain.init_subchains();
+   jcdp::util::write_json(chain, "generated_chain.json");
 
    std::println(
         "\nTangent cost: {}",
@@ -81,6 +83,7 @@ int main(int argc, char* argv[]) {
    std::println("{}", dp_seq);
 
    jcdp::util::write_dot(dp_seq, "dynamic_programming");
+   jcdp::util::write_json(dp_seq, "dp.json");
 
    // Schedule dynamic programming sequence via list scheduling
    auto start_list_sched = std::chrono::high_resolution_clock::now();
@@ -94,6 +97,8 @@ int main(int argc, char* argv[]) {
         "Optimized cost (DP + List scheduling): {}\n", dp_seq.makespan());
    std::println("{}", dp_seq);
 
+   jcdp::util::write_json(dp_seq, "dp_list.json");
+
    // Schedule dynamic programming sequence via branch & bound
    auto start_sched = std::chrono::high_resolution_clock::now();
    bnb_scheduler->schedule(dp_seq, dp_solver.m_usable_threads);
@@ -103,6 +108,8 @@ int main(int argc, char* argv[]) {
    std::println(
         "Optimized cost (DP + B&B scheduling): {}\n", dp_seq.makespan());
    std::println("{}", dp_seq);
+
+   jcdp::util::write_json(dp_seq, "dp_bnb.json");
 
    // Solve via branch & bound + List scheduling
    bnb_solver.init(chain, list_scheduler);
@@ -120,6 +127,8 @@ int main(int argc, char* argv[]) {
         bnb_seq_list.makespan());
    std::println("{}", bnb_seq_list);
 
+   jcdp::util::write_json(bnb_seq_list, "bnb_list.json");
+
    // Solve via branch & bound
    bnb_solver.init(chain, bnb_scheduler);
    bnb_solver.set_upper_bound(bnb_seq_list.makespan());
@@ -133,6 +142,7 @@ int main(int argc, char* argv[]) {
    std::println("{}", bnb_seq);
 
    jcdp::util::write_dot(bnb_seq, "branch_and_bound");
+   jcdp::util::write_json(bnb_seq, "bnb_bnb.json");
 
    return 0;
 }

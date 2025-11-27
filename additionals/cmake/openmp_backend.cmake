@@ -5,6 +5,10 @@ include(compiler_flags)
 
 # Custom OpenMP runtime library and include directory
 option(JCDP_BUILD_OPENMP_RUNTIME "Fetch and build OpenMP from source." OFF)
+if(EMSCRIPTEN)
+  set(JCDP_BUILD_OPENMP_RUNTIME ON CACHE BOOL "" FORCE)
+endif()
+
 set(JCDP_OPENMP_RUNTIME "" CACHE PATH "Custom OpenMP runtime library.")
 set(JCDP_OPENMP_INCLUDE_DIR "" CACHE PATH "Custom OpenMP include directory.")
 

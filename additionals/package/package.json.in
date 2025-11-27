@@ -8,13 +8,16 @@
     "dist",
     "lib"
   ],
-  "repository" : {
-    "type" : "git",
-    "url" : "git://github.com/STCE-at-RWTH/Jacobian-Chaining.git"
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/STCE-at-RWTH/Jacobian-Chaining.git"
   },
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "npm run build"
+    "test": "node test/test.js",
+    "prepublishOnly": "npm run build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "keywords": [
     "jacobian",
@@ -30,6 +33,7 @@
   "license": "CC-BY-4.0",
   "devDependencies": {
     "typescript": "^5.0.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "prettier": "^3.6.2"
   }
 }

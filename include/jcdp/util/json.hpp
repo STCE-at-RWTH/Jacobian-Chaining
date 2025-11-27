@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <fstream>
 #include <map>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -139,17 +140,73 @@ inline auto jacobian_chain_from_json(const std::string& json_str)
       chain.elemental_jacobians.push_back(jac);
    }
 
-   // Sort by index i to ensure correct order for the chain
-   std::sort(
-        chain.elemental_jacobians.begin(), chain.elemental_jacobians.end(),
-        [](const Jacobian& a, const Jacobian& b) {
-           return a.i < b.i;
-        });
-
-   // Initialize subchains
-   chain.init_subchains();
-
    return chain;
+}
+
+/**
+ * @brief Serializes a JacobianChain into a JSON string in the JSON Graph
+ * Format.
+ *
+ * @param chain The JacobianChain to serialize.
+ * @return std::string The JSON string.
+ */
+inline auto jacobian_chain_to_json(const JacobianChain& chain) -> std::string {
+   using json = nlohmann::json;
+   json j;
+   json graph;
+   json nodes = json::array();
+   json edges = json::array();
+
+   std::map<std::size_t, std::size_t> node_sizes;
+
+   for (const auto& jac : chain.elemental_jacobians) {
+      json edge;
+      edge["source"] = std::to_string(jac.i);
+      edge["target"] = std::to_string(jac.j);
+
+      json metadata;
+      metadata["n"] = jac.n;
+      metadata["m"] = jac.m;
+      metadata["ku"] = jac.ku;
+      metadata["kl"] = jac.kl;
+      metadata["non_zero_elements"] = jac.non_zero_elements;
+      metadata["edges_in_dag"] = jac.edges_in_dag;
+      metadata["tangentCost"] = jac.tangent_cost;
+      metadata["adjointCost"] = jac.adjoint_cost;
+      metadata["jacobianAccumulated"] = jac.is_accumulated;
+
+      edge["metadata"] = metadata;
+      edges.push_back(edge);
+
+      node_sizes[jac.i] = jac.n;
+      node_sizes[jac.j] = jac.m;
+   }
+
+   for (const auto& [id, size] : node_sizes) {
+      json node;
+      node["id"] = std::to_string(id);
+      node["metadata"] = {{"vectorSize", size}};
+      nodes.push_back(node);
+   }
+
+   graph["nodes"] = nodes;
+   graph["edges"] = edges;
+   j["graph"] = graph;
+
+   return j.dump();
+}
+
+/**
+ * @brief Writes a JacobianChain to a JSON file.
+ *
+ * @param chain The JacobianChain to serialize.
+ * @param filepath The path to the output file.
+ */
+inline void write_json(
+     const JacobianChain& chain, const std::string& filepath) {
+   std::ofstream file(filepath);
+   file << jacobian_chain_to_json(chain);
+   file.close();
 }
 
 /**
@@ -174,7 +231,7 @@ inline auto sequence_to_json(const Sequence& seq) -> std::string {
             step["method"] = "acc-adj";
          }
          indices.push_back(std::to_string(op.i));
-         indices.push_back(std::to_string(op.j));
+         indices.push_back(std::to_string(op.j + 1));
       } else {
          if (op.action == Action::MULTIPLICATION) {
             step["method"] = "elim-mul";
@@ -184,13 +241,26 @@ inline auto sequence_to_json(const Sequence& seq) -> std::string {
             step["method"] = "elim-adj";
          }
          indices.push_back(std::to_string(op.i));
-         indices.push_back(std::to_string(op.k));
-         indices.push_back(std::to_string(op.j));
+         indices.push_back(std::to_string(op.k + 1));
+         indices.push_back(std::to_string(op.j + 1));
       }
       step["indices"] = indices;
+      step["thread"] = op.thread;
       j.push_back(step);
    }
    return j.dump();
+}
+
+/**
+ * @brief Writes a Sequence to a JSON file.
+ *
+ * @param seq The Sequence to serialize.
+ * @param filepath The path to the output file.
+ */
+inline void write_json(const Sequence& seq, const std::string& filepath) {
+   std::ofstream file(filepath);
+   file << sequence_to_json(seq);
+   file.close();
 }
 
 }  // namespace jcdp::util

@@ -37,6 +37,7 @@ if(EMSCRIPTEN)
    target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s EXPORT_NAME=createJCDPModule")
    target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=0")
    target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s PTHREAD_POOL_SIZE='navigator.hardwareConcurrency'")
+   target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s EXPORTED_FUNCTIONS='[\"_malloc\", \"_free\"]'")
    target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s EXPORTED_RUNTIME_METHODS='[\"ENV\",\"ccall\",\"cwrap\",\"getValue\",\"UTF8ToString\"]'")
    target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s INITIAL_MEMORY=2147483648")
 
@@ -60,7 +61,6 @@ if(EMSCRIPTEN)
    add_custom_command(TARGET create_npm_package POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E make_directory ${NPM_PACKAGE_DIR}
       COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/additionals/package" ${NPM_PACKAGE_DIR}
-      COMMAND ${CMAKE_COMMAND} -E remove "${NPM_PACKAGE_DIR}/package.json.in"
       COMMENT "Copying package template"
    )
 
@@ -82,6 +82,7 @@ if(EMSCRIPTEN)
          DEPENDS create_npm_package
          WORKING_DIRECTORY ${NPM_PACKAGE_DIR}
          COMMAND ${NPM} install
+         COMMAND ${NPM} run format
          COMMAND ${NPM} run build
          COMMENT "Building NPM package"
       )

@@ -46,7 +46,6 @@ inline auto write_dot(const Sequence& sequence, const std::string& name)
    }
 
    std::println(out, "}}");
-
    out.close();
 }
 

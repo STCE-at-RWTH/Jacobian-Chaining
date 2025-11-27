@@ -8,11 +8,13 @@ cmake_policy(VERSION 3.25.0)
 
 add_executable(jcdp "jcdp.cpp")
 target_include_directories(jcdp PRIVATE ${JCDP_include_dirs})
+target_link_libraries(jcdp PRIVATE nlohmann_json::nlohmann_json)
 check_with_iwyu(jcdp IWYU_FLAGS ${JCDP_IWYU_FLAGS})
 check_with_cpplint(jcdp IWYU_FLAGS ${JCDP_IWYU_FLAGS})
 
 add_executable(jcdp_batch "jcdp_batch.cpp")
 target_include_directories(jcdp_batch PRIVATE ${JCDP_include_dirs})
+target_link_libraries(jcdp PRIVATE nlohmann_json::nlohmann_json)
 check_with_iwyu(jcdp_batch IWYU_FLAGS ${JCDP_IWYU_FLAGS})
 check_with_cpplint(jcdp_batch IWYU_FLAGS ${JCDP_IWYU_FLAGS})
 

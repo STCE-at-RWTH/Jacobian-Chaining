@@ -20,23 +20,20 @@ export interface JCDPGraph {
   edges: JCDPEdge[];
 }
 
-export type GFEMethod =
-  | "acc-tan"
-  | "acc-adj"
-  | "elim-tan"
-  | "elim-adj"
-  | "elim-mul";
+export type GFEMethod = 'acc-tan' | 'acc-adj' | 'elim-tan' | 'elim-adj' | 'elim-mul';
 
 export interface SequenceStep {
-  kind: "face";
+  kind: 'face';
   method: GFEMethod;
   indices: string[];
 }
 
 export interface JCDPOptions {
-  optimizer?: "dp" | "bnb";
-  scheduler?: "list" | "bnb";
-  threads?: number;
-  memory?: number;
+  optimizer?: 'dp' | 'bnb';
+  scheduler?: 'list' | 'bnb' | 'none';
+  OpenMPThreads?: number;
+  availableThreads?: number;
+  availableMemory?: number;
   timeToSolve?: number;
+  matrixFree?: boolean;
 }

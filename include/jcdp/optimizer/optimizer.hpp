@@ -71,6 +71,10 @@ class Optimizer : public util::Properties {
       m_available_memory = memory;
    }
 
+   inline auto set_matrix_free(bool matrix_free) -> void {
+      m_matrix_free = matrix_free;
+   }
+
  protected:
    std::size_t m_length {0};
    bool m_matrix_free {false};

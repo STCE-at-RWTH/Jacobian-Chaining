@@ -1,6 +1,6 @@
-import { JCDPGraph, JCDPOptions, SequenceStep } from "./types";
+import { JCDPGraph, JCDPOptions, SequenceStep } from './types';
 
-const createModule = require("../jcdp/jcdp.js");
+const createModule = require('../jcdp/jcdp.js');
 
 let moduleInstance: any = null;
 async function getModule() {
@@ -21,29 +21,34 @@ export async function jcdp(
 ): Promise<SequenceStep[]> {
   const mod = await getModule();
 
-  const jsonStr = typeof input === "string" ? input : JSON.stringify(input);
-  const optimizer = options.optimizer || "dp";
-  const scheduler = options.scheduler || "list";
-  const threads = options.threads || 1;
-  const memory = options.memory || 0;
-  const timeToSolve = options.timeToSolve || 60;
+  // Prepare input parameters for C function
+  const json_str = typeof input === 'string' ? input : JSON.stringify(input);
+  const optimizer = options.optimizer || 'dp';
+  const scheduler = options.scheduler || 'list';
+  const omp_threads = options.OpenMPThreads || 1;
+  const available_threads = options.availableThreads || 1;
+  const available_memory = options.availableMemory || 0;
+  const time_to_solve = options.timeToSolve || 60;
+  const matrix_free = options.matrixFree ? 1 : 0;
 
   // Allocate pointer to pointer for result
-  const resultPtrPtr = mod._malloc(8);
+  const result_buffer = mod._malloc(8);
 
   try {
     const ret = mod.ccall(
-      "jcdp_run_from_json",
-      "number",
-      ["string", "string", "string", "number", "number", "number", "number"],
+      'jcdp_run_from_json',
+      'number',
+      ['string', 'string', 'string', 'number', 'number', 'number', 'number', 'number', 'number'],
       [
-        jsonStr,
+        json_str,
         optimizer,
         scheduler,
-        threads,
-        memory,
-        timeToSolve,
-        resultPtrPtr,
+        omp_threads,
+        available_threads,
+        available_memory,
+        time_to_solve,
+        matrix_free,
+        result_buffer,
       ]
     );
 
@@ -52,21 +57,21 @@ export async function jcdp(
     }
 
     // Read the result pointer from the pointer-pointer
-    const resultPtr = mod.getValue(resultPtrPtr, "i8*");
+    const resultPtr = mod.getValue(result_buffer, 'i8*');
 
     if (resultPtr === 0) {
-      return []; // Or throw error if result expected
+      return [];
     }
 
-    let resultJson: string = "";
+    let resultJson: string = '';
     if (mod.UTF8ToString) {
       resultJson = mod.UTF8ToString(resultPtr);
     }
 
     return JSON.parse(resultJson) as SequenceStep[];
   } finally {
-    mod._free(resultPtrPtr);
+    mod._free(result_buffer);
   }
 }
 
-export * from "./types";
+export type * from './types';
