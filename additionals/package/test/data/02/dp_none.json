@@ -1,0 +1,9 @@
+[
+  { "indices": ["10", "11"], "kind": "face", "method": "acc-tan", "thread": 0 },
+  { "indices": ["9", "10"], "kind": "face", "method": "acc-adj", "thread": 1 },
+  { "indices": ["2", "9", "10"], "kind": "face", "method": "elim-adj", "thread": 1 },
+  { "indices": ["1", "2"], "kind": "face", "method": "acc-adj", "thread": 2 },
+  { "indices": ["0", "1", "2"], "kind": "face", "method": "elim-adj", "thread": 2 },
+  { "indices": ["0", "2", "10"], "kind": "face", "method": "elim-mul", "thread": 1 },
+  { "indices": ["0", "10", "11"], "kind": "face", "method": "elim-mul", "thread": 1 }
+]

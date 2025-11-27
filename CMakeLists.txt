@@ -14,8 +14,8 @@ cmake_policy(VERSION 3.25.0)
 set(JCDP_PROJECT_DESCRIPTION "Jacobian Chaining via Dynamic Programming")
 
 # Project version
-set(JCDP_VER_MAJOR 0)
-set(JCDP_VER_MINOR 1)
+set(JCDP_VER_MAJOR 1)
+set(JCDP_VER_MINOR 0)
 set(JCDP_VER_PATCH 0)
 set(JCDP_VERSION "${JCDP_VER_MAJOR}.${JCDP_VER_MINOR}.${JCDP_VER_PATCH}")
 

@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
    jcdp::JacobianChain chain;
    jcgen.next(chain);
    chain.init_subchains();
-   jcdp::util::write_json(chain, "generated_chain.json");
+   jcdp::util::write_json(chain, "chain.json");
 
    std::println(
         "\nTangent cost: {}",
@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
    std::println("{}", dp_seq);
 
    jcdp::util::write_dot(dp_seq, "dynamic_programming");
-   jcdp::util::write_json(dp_seq, "dp.json");
+   jcdp::util::write_json(dp_seq, "dp_none.json");
 
    // Schedule dynamic programming sequence via list scheduling
    auto start_list_sched = std::chrono::high_resolution_clock::now();

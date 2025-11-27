@@ -1,0 +1,185 @@
+{
+  "graph": {
+    "edges": [
+      {
+        "metadata": {
+          "adjointCost": 72211,
+          "edges_in_dag": 72211,
+          "jacobianAccumulated": false,
+          "kl": 186,
+          "ku": 325,
+          "m": 437,
+          "n": 418,
+          "non_zero_elements": 12569866554532823477,
+          "tangentCost": 72211
+        },
+        "source": "0",
+        "target": "1"
+      },
+      {
+        "metadata": {
+          "adjointCost": 47016,
+          "edges_in_dag": 47016,
+          "jacobianAccumulated": false,
+          "kl": 131,
+          "ku": 380,
+          "m": 198,
+          "n": 437,
+          "non_zero_elements": 2428791464454122933,
+          "tangentCost": 47016
+        },
+        "source": "1",
+        "target": "2"
+      },
+      {
+        "metadata": {
+          "adjointCost": 73840,
+          "edges_in_dag": 73840,
+          "jacobianAccumulated": false,
+          "kl": 111,
+          "ku": 62,
+          "m": 190,
+          "n": 198,
+          "non_zero_elements": 2773472278399287494,
+          "tangentCost": 73840
+        },
+        "source": "2",
+        "target": "3"
+      },
+      {
+        "metadata": {
+          "adjointCost": 63985,
+          "edges_in_dag": 63985,
+          "jacobianAccumulated": false,
+          "kl": 254,
+          "ku": 32,
+          "m": 495,
+          "n": 190,
+          "non_zero_elements": 12988531738507129327,
+          "tangentCost": 63985
+        },
+        "source": "3",
+        "target": "4"
+      },
+      {
+        "metadata": {
+          "adjointCost": 43578,
+          "edges_in_dag": 43578,
+          "jacobianAccumulated": false,
+          "kl": 183,
+          "ku": 21,
+          "m": 335,
+          "n": 495,
+          "non_zero_elements": 6543805833546220015,
+          "tangentCost": 43578
+        },
+        "source": "4",
+        "target": "5"
+      },
+      {
+        "metadata": {
+          "adjointCost": 60077,
+          "edges_in_dag": 60077,
+          "jacobianAccumulated": false,
+          "kl": 147,
+          "ku": 321,
+          "m": 166,
+          "n": 335,
+          "non_zero_elements": 5650643352373535055,
+          "tangentCost": 60077
+        },
+        "source": "5",
+        "target": "6"
+      },
+      {
+        "metadata": {
+          "adjointCost": 4225,
+          "edges_in_dag": 4225,
+          "jacobianAccumulated": false,
+          "kl": 176,
+          "ku": 55,
+          "m": 279,
+          "n": 166,
+          "non_zero_elements": 17021202328055963927,
+          "tangentCost": 4225
+        },
+        "source": "6",
+        "target": "7"
+      },
+      {
+        "metadata": {
+          "adjointCost": 72361,
+          "edges_in_dag": 72361,
+          "jacobianAccumulated": false,
+          "kl": 131,
+          "ku": 276,
+          "m": 139,
+          "n": 279,
+          "non_zero_elements": 12592038905734576407,
+          "tangentCost": 72361
+        },
+        "source": "7",
+        "target": "8"
+      },
+      {
+        "metadata": {
+          "adjointCost": 71444,
+          "edges_in_dag": 71444,
+          "jacobianAccumulated": false,
+          "kl": 17,
+          "ku": 122,
+          "m": 106,
+          "n": 139,
+          "non_zero_elements": 9166723529339342987,
+          "tangentCost": 71444
+        },
+        "source": "8",
+        "target": "9"
+      },
+      {
+        "metadata": {
+          "adjointCost": 27090,
+          "edges_in_dag": 27090,
+          "jacobianAccumulated": false,
+          "kl": 8,
+          "ku": 10,
+          "m": 62,
+          "n": 106,
+          "non_zero_elements": 5886259386695638122,
+          "tangentCost": 27090
+        },
+        "source": "9",
+        "target": "10"
+      },
+      {
+        "metadata": {
+          "adjointCost": 80214,
+          "edges_in_dag": 80214,
+          "jacobianAccumulated": false,
+          "kl": 123,
+          "ku": 12,
+          "m": 436,
+          "n": 62,
+          "non_zero_elements": 15903186565950210484,
+          "tangentCost": 80214
+        },
+        "source": "10",
+        "target": "11"
+      }
+    ],
+    "nodes": [
+      { "id": "0", "metadata": { "vectorSize": 418 } },
+      { "id": "1", "metadata": { "vectorSize": 437 } },
+      { "id": "2", "metadata": { "vectorSize": 198 } },
+      { "id": "3", "metadata": { "vectorSize": 190 } },
+      { "id": "4", "metadata": { "vectorSize": 495 } },
+      { "id": "5", "metadata": { "vectorSize": 335 } },
+      { "id": "6", "metadata": { "vectorSize": 166 } },
+      { "id": "7", "metadata": { "vectorSize": 279 } },
+      { "id": "8", "metadata": { "vectorSize": 139 } },
+      { "id": "9", "metadata": { "vectorSize": 106 } },
+      { "id": "10", "metadata": { "vectorSize": 62 } },
+      { "id": "11", "metadata": { "vectorSize": 436 } }
+    ]
+  }
+}

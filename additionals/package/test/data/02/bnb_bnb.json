@@ -1,0 +1,16 @@
+[
+  { "indices": ["1", "2"], "kind": "face", "method": "acc-adj", "thread": 0 },
+  { "indices": ["2", "3"], "kind": "face", "method": "acc-adj", "thread": 1 },
+  { "indices": ["9", "10"], "kind": "face", "method": "acc-adj", "thread": 2 },
+  { "indices": ["10", "11"], "kind": "face", "method": "acc-tan", "thread": 1 },
+  { "indices": ["0", "1", "2"], "kind": "face", "method": "elim-adj", "thread": 0 },
+  { "indices": ["8", "9", "10"], "kind": "face", "method": "elim-adj", "thread": 2 },
+  { "indices": ["7", "8", "10"], "kind": "face", "method": "elim-adj", "thread": 2 },
+  { "indices": ["6", "7", "10"], "kind": "face", "method": "elim-adj", "thread": 2 },
+  { "indices": ["5", "6", "10"], "kind": "face", "method": "elim-adj", "thread": 2 },
+  { "indices": ["4", "5", "10"], "kind": "face", "method": "elim-adj", "thread": 2 },
+  { "indices": ["3", "4", "10"], "kind": "face", "method": "elim-adj", "thread": 2 },
+  { "indices": ["2", "3", "10"], "kind": "face", "method": "elim-mul", "thread": 1 },
+  { "indices": ["0", "2", "10"], "kind": "face", "method": "elim-mul", "thread": 0 },
+  { "indices": ["0", "10", "11"], "kind": "face", "method": "elim-mul", "thread": 0 }
+]

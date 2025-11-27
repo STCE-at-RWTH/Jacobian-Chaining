@@ -1,10 +1,9 @@
 const fs = require('fs');
 const path = require('path');
+const { performance } = require('perf_hooks');
 const { jcdp } = require('../dist/index.js');
 
-const dataDir = path.join(__dirname, 'data');
-const chainPath = path.join(dataDir, 'chain.json');
-const chainData = fs.readFileSync(chainPath, 'utf8');
+const dataRootDir = path.join(__dirname, 'data');
 
 const testCases = [
   { optimizer: 'dp', scheduler: 'none', expectedFile: 'dp_none.json' },
@@ -14,38 +13,90 @@ const testCases = [
   { optimizer: 'bnb', scheduler: 'bnb', expectedFile: 'bnb_bnb.json' },
 ];
 
+function parseConfig(configPath) {
+  const content = fs.readFileSync(configPath, 'utf8');
+  const config = {};
+  content.split('\n').forEach((line) => {
+    const parts = line.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      const key = parts[0];
+      const value = parts[1];
+      if (key === 'available_threads') {
+        config.availableThreads = parseInt(value, 10);
+      }
+      if (key === 'available_memory') {
+        config.availableMemory = parseInt(value, 10);
+      }
+      if (key === 'time_to_solve') {
+        config.timeToSolve = parseInt(value, 10);
+      }
+      if (key === 'matrix_free') {
+        config.matrixFree = parseInt(value, 10) === 1;
+      }
+    }
+  });
+  return config;
+}
+
 async function run() {
   try {
     console.log('Running JCDP Tests with data files...');
     let failed = false;
 
-    for (const testCase of testCases) {
-      const { optimizer, scheduler, expectedFile } = testCase;
-      console.log(`\nTesting Optimizer: ${optimizer}, Scheduler: ${scheduler}`);
+    const dirs = fs
+      .readdirSync(dataRootDir)
+      .filter((f) => fs.statSync(path.join(dataRootDir, f)).isDirectory());
 
-      const expectedPath = path.join(dataDir, expectedFile);
-      const expectedData = JSON.parse(fs.readFileSync(expectedPath, 'utf8'));
+    for (const dir of dirs) {
+      const currentDataDir = path.join(dataRootDir, dir);
+      console.log(`\n--- Testing Dataset: ${dir} ---`);
 
-      const result = await jcdp(chainData, {
-        optimizer: optimizer,
-        scheduler: scheduler,
-        OpenMPThreads: 1,
-        availableThreads: 2,
-        availableMemory: 0,
-        timeToSolve: 60,
-        matrixFree: true,
-      });
+      const configPath = path.join(currentDataDir, 'config.in');
+      const config = parseConfig(configPath);
+      console.log('Config:', config);
 
-      const resultStr = JSON.stringify(result);
-      const expectedStr = JSON.stringify(expectedData);
+      const chainPath = path.join(currentDataDir, 'chain.json');
+      const chainData = fs.readFileSync(chainPath, 'utf8');
 
-      if (resultStr === expectedStr) {
-        console.log('✅ Passed');
-      } else {
-        console.error('❌ Failed');
-        console.error('Expected:', JSON.stringify(expectedData, null, 2));
-        console.error('Actual:', JSON.stringify(result, null, 2));
-        failed = true;
+      for (const OpenMPThreads of [1, 2, 4]) {
+        for (const testCase of testCases) {
+          const { optimizer, scheduler, expectedFile } = testCase;
+          console.log(
+            `\nTesting Optimizer: ${optimizer}, Scheduler: ${scheduler}, OpenMP Threads: ${OpenMPThreads}`,
+          );
+
+          const expectedPath = path.join(currentDataDir, expectedFile);
+          if (!fs.existsSync(expectedPath)) {
+            console.log(`Skipping ${expectedFile} (not found)`);
+            continue;
+          }
+          const expectedData = JSON.parse(fs.readFileSync(expectedPath, 'utf8'));
+
+          const startTime = performance.now();
+          const result = await jcdp(chainData, {
+            optimizer: optimizer,
+            scheduler: scheduler,
+            OpenMPThreads: OpenMPThreads,
+            availableThreads: config.availableThreads,
+            availableMemory: config.availableMemory,
+            timeToSolve: config.timeToSolve,
+            matrixFree: config.matrixFree,
+          });
+          const endTime = performance.now();
+          console.log(`Time: ${(endTime - startTime).toFixed(2)}ms`);
+
+          const resultStr = JSON.stringify(result);
+          const expectedStr = JSON.stringify(expectedData);
+
+          if (resultStr === expectedStr) {
+            console.log('✅ Passed');
+          } else {
+            console.error('❌ Failed');
+            console.error('Expected:', JSON.stringify(expectedData, null, 2));
+            console.error('Actual:', JSON.stringify(result, null, 2));
+            failed = true;
+          }
+        }
       }
     }
 
