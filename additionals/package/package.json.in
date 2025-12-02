@@ -2,8 +2,12 @@
   "name": "jcdp",
   "version": "@JCDP_VERSION@",
   "description": "WASM bindings for Jacobian Chain Dynamic Programming (JCDP)",
+  "type": "module"
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  }
   "files": [
     "dist",
     "lib"

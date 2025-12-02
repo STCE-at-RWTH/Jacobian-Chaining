@@ -40,6 +40,9 @@ if(EMSCRIPTEN)
    target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s EXPORTED_FUNCTIONS='[\"_malloc\", \"_free\"]'")
    target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s EXPORTED_RUNTIME_METHODS='[\"ENV\",\"ccall\",\"cwrap\",\"getValue\",\"UTF8ToString\"]'")
    target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s INITIAL_MEMORY=2147483648")
+   target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s EXPORT_ES6=1")
+   target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s USE_ES6_IMPORT_META=1")
+   target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s ENVIRONMENT='web,worker'")
 
    list(APPEND jcdp_libs ${jcdp_lib_name}_wasm)
 
