@@ -42,7 +42,8 @@ if(EMSCRIPTEN)
    target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s INITIAL_MEMORY=2147483648")
    target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s EXPORT_ES6=1")
    target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s USE_ES6_IMPORT_META=1")
-   target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s ENVIRONMENT='web,worker'")
+   # target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:-s ENVIRONMENT='web,worker'")
+   target_link_options(${jcdp_lib_name}_wasm PRIVATE "SHELL:--emit-tsd $<TARGET_FILE_DIR:${jcdp_lib_name}_wasm>/${jcdp_lib_name}.d.ts")
 
    list(APPEND jcdp_libs ${jcdp_lib_name}_wasm)
 
@@ -75,6 +76,9 @@ if(EMSCRIPTEN)
          "${NPM_PACKAGE_DIR}/lib/"
       COMMAND ${CMAKE_COMMAND} -E copy
          "$<TARGET_FILE_DIR:${jcdp_lib_name}_wasm>/${jcdp_lib_name}.wasm"
+         "${NPM_PACKAGE_DIR}/lib/"
+      COMMAND ${CMAKE_COMMAND} -E copy
+         "$<TARGET_FILE_DIR:${jcdp_lib_name}_wasm>/${jcdp_lib_name}.d.ts"
          "${NPM_PACKAGE_DIR}/lib/"
       COMMENT "Copying WASM artifacts to NPM package"
    )
@@ -119,5 +123,7 @@ endforeach()
 install(TARGETS ${jcdp_libs} DESTINATION lib)
 if(EMSCRIPTEN)
    set(wasm_file "$<TARGET_FILE_DIR:${jcdp_lib_name}_wasm>/${jcdp_lib_name}.wasm")
+   set(dts_file "$<TARGET_FILE_DIR:${jcdp_lib_name}_wasm>/${jcdp_lib_name}.d.ts")
    install(FILES ${wasm_file} DESTINATION lib)
+   install(FILES ${dts_file} DESTINATION lib)
 endif()

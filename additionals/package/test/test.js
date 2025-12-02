@@ -1,7 +1,10 @@
-const fs = require('fs');
-const path = require('path');
-const { performance } = require('perf_hooks');
-const { jcdp } = require('../dist/index.js');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { jcdp } from '../dist/index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const dataRootDir = path.join(__dirname, 'data');
 

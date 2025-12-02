@@ -1,7 +1,1 @@
-[
-  { "indices": ["1", "2"], "kind": "face", "method": "acc-tan", "thread": 0 },
-  { "indices": ["1", "2", "6"], "kind": "face", "method": "elim-tan", "thread": 0 },
-  { "indices": ["0", "1"], "kind": "face", "method": "acc-adj", "thread": 1 },
-  { "indices": ["0", "1", "6"], "kind": "face", "method": "elim-mul", "thread": 0 },
-  { "indices": ["0", "6", "7"], "kind": "face", "method": "elim-tan", "thread": 0 }
-]
+[{"fillIn":0,"indices":["1","2"],"kind":"accumulate-edge","method":"acc-tan","startTime":0,"threadID":0,"totalCost":2484496},{"fillIn":-1,"indices":["1","2","6"],"kind":"face","method":"elim-tan","startTime":2484496,"threadID":0,"totalCost":4345544},{"fillIn":0,"indices":["0","1"],"kind":"accumulate-edge","method":"acc-adj","startTime":0,"threadID":1,"totalCost":3574704},{"fillIn":-1,"indices":["0","1","6"],"kind":"face","method":"elim-mul","startTime":6830040,"threadID":0,"totalCost":545664},{"fillIn":-1,"indices":["0","6","7"],"kind":"face","method":"elim-tan","startTime":7375704,"threadID":0,"totalCost":1694784}]

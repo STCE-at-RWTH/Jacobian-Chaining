@@ -21,6 +21,7 @@
 
 #include "jcdp/jacobian.hpp"
 #include "jcdp/jacobian_chain.hpp"
+#include "jcdp/operation.hpp"
 #include "jcdp/sequence.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
@@ -219,12 +220,12 @@ inline auto sequence_to_json(const Sequence& seq) -> std::string {
    using json = nlohmann::json;
    json j = json::array();
 
-   for (const auto& op : seq) {
+   for (const Operation& op : seq) {
       json step;
-      step["kind"] = "face";
 
       std::vector<std::string> indices;
       if (op.action == Action::ACCUMULATION) {
+         step["kind"] = "accumulate-edge";
          if (op.mode == Mode::TANGENT) {
             step["method"] = "acc-tan";
          } else {
@@ -232,7 +233,9 @@ inline auto sequence_to_json(const Sequence& seq) -> std::string {
          }
          indices.push_back(std::to_string(op.i));
          indices.push_back(std::to_string(op.j + 1));
+         step["fillIn"] = 0;
       } else {
+         step["kind"] = "face";
          if (op.action == Action::MULTIPLICATION) {
             step["method"] = "elim-mul";
          } else if (op.mode == Mode::TANGENT) {
@@ -243,9 +246,12 @@ inline auto sequence_to_json(const Sequence& seq) -> std::string {
          indices.push_back(std::to_string(op.i));
          indices.push_back(std::to_string(op.k + 1));
          indices.push_back(std::to_string(op.j + 1));
+         step["fillIn"] = -1;
       }
       step["indices"] = indices;
-      step["thread"] = op.thread;
+      step["totalCost"] = op.fma;
+      step["threadID"] = op.thread;
+      step["startTime"] = op.start_time;
       j.push_back(step);
    }
    return j.dump();

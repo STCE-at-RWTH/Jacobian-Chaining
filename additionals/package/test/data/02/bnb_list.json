@@ -1,16 +1,1 @@
-[
-  { "indices": ["1", "2"], "kind": "face", "method": "acc-adj", "thread": 2 },
-  { "indices": ["2", "3"], "kind": "face", "method": "acc-adj", "thread": 1 },
-  { "indices": ["9", "10"], "kind": "face", "method": "acc-adj", "thread": 0 },
-  { "indices": ["10", "11"], "kind": "face", "method": "acc-tan", "thread": 1 },
-  { "indices": ["0", "1", "2"], "kind": "face", "method": "elim-adj", "thread": 2 },
-  { "indices": ["8", "9", "10"], "kind": "face", "method": "elim-adj", "thread": 0 },
-  { "indices": ["7", "8", "10"], "kind": "face", "method": "elim-adj", "thread": 0 },
-  { "indices": ["6", "7", "10"], "kind": "face", "method": "elim-adj", "thread": 0 },
-  { "indices": ["5", "6", "10"], "kind": "face", "method": "elim-adj", "thread": 0 },
-  { "indices": ["4", "5", "10"], "kind": "face", "method": "elim-adj", "thread": 0 },
-  { "indices": ["3", "4", "10"], "kind": "face", "method": "elim-adj", "thread": 0 },
-  { "indices": ["2", "3", "10"], "kind": "face", "method": "elim-mul", "thread": 0 },
-  { "indices": ["0", "2", "10"], "kind": "face", "method": "elim-mul", "thread": 2 },
-  { "indices": ["0", "10", "11"], "kind": "face", "method": "elim-mul", "thread": 2 }
-]
+[{"fillIn":0,"indices":["1","2"],"kind":"accumulate-edge","method":"acc-adj","startTime":0,"threadID":2,"totalCost":9309168},{"fillIn":0,"indices":["2","3"],"kind":"accumulate-edge","method":"acc-adj","startTime":0,"threadID":1,"totalCost":14029600},{"fillIn":0,"indices":["9","10"],"kind":"accumulate-edge","method":"acc-adj","startTime":0,"threadID":0,"totalCost":1679580},{"fillIn":0,"indices":["10","11"],"kind":"accumulate-edge","method":"acc-tan","startTime":14029600,"threadID":1,"totalCost":4973268},{"fillIn":-1,"indices":["0","1","2"],"kind":"face","method":"elim-adj","startTime":9309168,"threadID":2,"totalCost":14297778},{"fillIn":-1,"indices":["8","9","10"],"kind":"face","method":"elim-adj","startTime":1679580,"threadID":0,"totalCost":4429528},{"fillIn":-1,"indices":["7","8","10"],"kind":"face","method":"elim-adj","startTime":6109108,"threadID":0,"totalCost":4486382},{"fillIn":-1,"indices":["6","7","10"],"kind":"face","method":"elim-adj","startTime":10595490,"threadID":0,"totalCost":261950},{"fillIn":-1,"indices":["5","6","10"],"kind":"face","method":"elim-adj","startTime":10857440,"threadID":0,"totalCost":3724774},{"fillIn":-1,"indices":["4","5","10"],"kind":"face","method":"elim-adj","startTime":14582214,"threadID":0,"totalCost":2701836},{"fillIn":-1,"indices":["3","4","10"],"kind":"face","method":"elim-adj","startTime":17284050,"threadID":0,"totalCost":3967070},{"fillIn":-1,"indices":["2","3","10"],"kind":"face","method":"elim-mul","startTime":21251120,"threadID":0,"totalCost":2332440},{"fillIn":-1,"indices":["0","2","10"],"kind":"face","method":"elim-mul","startTime":23606946,"threadID":2,"totalCost":5131368},{"fillIn":-1,"indices":["0","10","11"],"kind":"face","method":"elim-mul","startTime":28738314,"threadID":2,"totalCost":11299376}]

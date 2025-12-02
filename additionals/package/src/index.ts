@@ -1,30 +1,28 @@
-import { JCDPGraph, JCDPOptions, SequenceStep } from "./types";
+import { JCDPGraph, JCDPOptions, SequenceStep } from './types.js';
+import createJCDPModule from '../lib/jcdp.js';
+import { fileURLToPath } from 'url';
 
-const createModule = require("../lib/jcdp.js");
-
-// 1. Resolve assets using import.meta.url
-// Bundlers (Vite/Webpack) will see these, bundle the files, and replace these variables with the final public URLs.
-const wasmUrl = new URL("/lib/jcdp.wasm", import.meta.url).href;
-const jsUrl = new URL("../lib/jcdp.js", import.meta.url).href;
+// Resolve assets using import.meta.url. Bundlers (Vite/Webpack) will see these,
+// bundle the files, and replace these variables with the final public URLs.
+const wasmUrl = new URL('../lib/jcdp.wasm', import.meta.url).href;
+const jsUrlObj = new URL('../lib/jcdp.js', import.meta.url);
+const jsUrl = jsUrlObj.href;
 
 let moduleInstance: any = null;
 
 async function getModule() {
   if (!moduleInstance) {
-    moduleInstance = await createModule({
-      // 2. Tell Emscripten where to find the WASM file
+    moduleInstance = await createJCDPModule({
       locateFile: (path: string) => {
-        if (path.endsWith(".wasm")) {
+        if (path.endsWith('.wasm')) {
           return wasmUrl;
         }
-        if (path.endsWith(".js")) {
+        if (path.endsWith('.js')) {
           return jsUrl;
         }
         return path;
       },
-      // 3. Critical for Workers: Tell Emscripten the URL of its own script
-      // This fixes the "Unexpected token '<'" error by preventing it from trying to load index.html
-      mainScriptUrlOrBlob: jsUrl,
+      mainScriptUrlOrBlob: jsUrlObj.protocol === 'file:' ? fileURLToPath(jsUrlObj) : jsUrl,
     });
   }
   return moduleInstance;
@@ -42,9 +40,9 @@ export async function jcdp(
   const mod = await getModule();
 
   // Prepare input parameters for C function
-  const json_str = typeof input === "string" ? input : JSON.stringify(input);
-  const optimizer = options.optimizer || "dp";
-  const scheduler = options.scheduler || "list";
+  const json_str = typeof input === 'string' ? input : JSON.stringify(input);
+  const optimizer = options.optimizer || 'dp';
+  const scheduler = options.scheduler || 'list';
   const omp_threads = options.OpenMPThreads || 1;
   const available_threads = options.availableThreads || 1;
   const available_memory = options.availableMemory || 0;
@@ -55,20 +53,12 @@ export async function jcdp(
   const result_buffer = mod._malloc(8);
 
   try {
+    console.log(`Running JCDP with ${omp_threads} OpenMP threads`);
+    const startTime = performance.now();
     const ret = mod.ccall(
-      "jcdp_run_from_json",
-      "number",
-      [
-        "string",
-        "string",
-        "string",
-        "number",
-        "number",
-        "number",
-        "number",
-        "number",
-        "number",
-      ],
+      'jcdp_run_from_json',
+      'number',
+      ['string', 'string', 'string', 'number', 'number', 'number', 'number', 'number', 'number'],
       [
         json_str,
         optimizer,
@@ -81,19 +71,21 @@ export async function jcdp(
         result_buffer,
       ]
     );
+    const endTime = performance.now();
+    console.log(`JCDP execution took ${(endTime - startTime).toFixed(2)} ms`);
 
     if (ret !== 0) {
       throw new Error(`JCDP execution failed with code ${ret}`);
     }
 
     // Read the result pointer from the pointer-pointer
-    const resultPtr = mod.getValue(result_buffer, "i8*");
+    const resultPtr = mod.getValue(result_buffer, 'i8*');
 
     if (resultPtr === 0) {
       return [];
     }
 
-    let resultJson: string = "";
+    let resultJson: string = '';
     if (mod.UTF8ToString) {
       resultJson = mod.UTF8ToString(resultPtr);
     }
@@ -104,4 +96,4 @@ export async function jcdp(
   }
 }
 
-export type * from "./types";
+export type * from './types.js';

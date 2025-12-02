@@ -23,9 +23,13 @@ export interface JCDPGraph {
 export type GFEMethod = 'acc-tan' | 'acc-adj' | 'elim-tan' | 'elim-adj' | 'elim-mul';
 
 export interface SequenceStep {
-  kind: 'face';
+  kind: 'accumulate-edge' | 'face';
   method: GFEMethod;
   indices: string[];
+  totalCost: number;
+  fillIn: number;
+  threadID: number;
+  startTime: number;
 }
 
 export interface JCDPOptions {
