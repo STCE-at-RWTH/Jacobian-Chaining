@@ -16,7 +16,7 @@ set(JCDP_PROJECT_DESCRIPTION "Jacobian Chaining via Dynamic Programming")
 # Project version
 set(JCDP_VER_MAJOR 0)
 set(JCDP_VER_MINOR 4)
-set(JCDP_VER_PATCH 0)
+set(JCDP_VER_PATCH 2)
 set(JCDP_VERSION "${JCDP_VER_MAJOR}.${JCDP_VER_MINOR}.${JCDP_VER_PATCH}")
 
 project(JCDP
@@ -98,6 +98,7 @@ add_subdirectory(include)
 # **************************************************************************** #
 # Compile sources
 # **************************************************************************** #
+enable_testing()
 add_subdirectory(src)
 if(NOT EMSCRIPTEN)
    add_subdirectory(examples)

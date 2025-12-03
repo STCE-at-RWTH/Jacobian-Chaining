@@ -1,6 +1,5 @@
 import { JCDPGraph, JCDPOptions, SequenceStep } from './types.js';
 import createJCDPModule from '../lib/jcdp.js';
-import { fileURLToPath } from 'url';
 
 // Resolve assets using import.meta.url. Bundlers (Vite/Webpack) will see these,
 // bundle the files, and replace these variables with the final public URLs.
@@ -8,10 +7,20 @@ const wasmUrl = new URL('../lib/jcdp.wasm', import.meta.url).href;
 const jsUrlObj = new URL('../lib/jcdp.js', import.meta.url);
 const jsUrl = jsUrlObj.href;
 
+const isNode =
+  typeof process !== 'undefined' && process.versions != null && process.versions.node != null;
+
 let moduleInstance: any = null;
 
 async function getModule() {
   if (!moduleInstance) {
+    let mainScript = jsUrl;
+    if (isNode && jsUrlObj.protocol === 'file:') {
+      // In Node.js, we need to provide the mainScript as a file path
+      const { fileURLToPath } = await import('url');
+      mainScript = fileURLToPath(jsUrlObj);
+    }
+
     moduleInstance = await createJCDPModule({
       locateFile: (path: string) => {
         if (path.endsWith('.wasm')) {
@@ -22,7 +31,7 @@ async function getModule() {
         }
         return path;
       },
-      mainScriptUrlOrBlob: jsUrlObj.protocol === 'file:' ? fileURLToPath(jsUrlObj) : jsUrl,
+      mainScriptUrlOrBlob: mainScript,
     });
   }
   return moduleInstance;
