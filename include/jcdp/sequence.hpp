@@ -16,9 +16,11 @@
 #include <deque>  // IWYU pragma: export
 #include <format>
 #include <functional>
+#include <iostream>
 #include <limits>
 #include <numeric>
 #include <optional>
+#include <print>
 #include <vector>
 
 #include "jcdp/operation.hpp"
@@ -145,6 +147,22 @@ class Sequence : public std::deque<Operation> {
       return std::count_if(cbegin(), cend(), [](const Operation& op) -> bool {
          return op.action == Action::ACCUMULATION;
       });
+   }
+
+   inline auto get_operation(
+        const size_t j, const std::optional<size_t> i = {},
+        const std::optional<size_t> k = {}) const -> std::optional<Operation> {
+      auto it = std::find_if(
+           cbegin(), cend(), [j, i, k](const Operation& existing_op) -> bool {
+              return (
+                   existing_op.i == i.value_or(j) && existing_op.j == j &&
+                   existing_op.k == k.value_or(j));
+           });
+
+      if (it != cend()) {
+         return *it;
+      }
+      return std::nullopt;
    }
 
    inline auto operator+(const Sequence& rhs) -> const Sequence {

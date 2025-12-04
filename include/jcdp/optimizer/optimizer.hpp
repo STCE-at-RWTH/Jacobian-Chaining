@@ -34,6 +34,9 @@ class Optimizer : public util::Properties {
            m_matrix_free, "matrix_free",
            "Wether we optimize the matrix-free problem.");
       register_property(
+           m_group_consecutive_eliminations, "group_consecutive_eliminations",
+           "Whether to group consecutive tangent or adjoint eliminations.");
+      register_property(
            m_banded, "banded",
            "Wether the assume that the Jacobians are banded.");
       register_property(
@@ -59,7 +62,7 @@ class Optimizer : public util::Properties {
       m_chain.optimized_costs.resize(1 + m_usable_threads);
    }
 
-   virtual auto solve() -> Sequence = 0;
+   virtual auto solve(const Sequence& partial) -> Sequence = 0;
 
    std::size_t m_usable_threads {0};
 
@@ -75,9 +78,14 @@ class Optimizer : public util::Properties {
       m_matrix_free = matrix_free;
    }
 
+   inline auto set_group_consecutive_eliminations(bool group_elims) -> void {
+      m_group_consecutive_eliminations = group_elims;
+   }
+
  protected:
    std::size_t m_length {0};
    bool m_matrix_free {false};
+   bool m_group_consecutive_eliminations {true};
    bool m_banded {false};
    bool m_sparse {false};
    std::size_t m_available_memory {0};

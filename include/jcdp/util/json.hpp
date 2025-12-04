@@ -211,6 +211,65 @@ inline void write_json(
 }
 
 /**
+ * @brief Creates a Sequence from a serialized JSON string.
+ *
+ * @param json_str The JSON string representing the sequence.
+ * @return Sequence The constructed sequence.
+ */
+inline auto sequence_from_json(const std::string& json_str) -> Sequence {
+   using json = nlohmann::json;
+   auto j = json::parse(json_str);
+   Sequence seq;
+
+   for (const auto& step : j) {
+      Operation op;
+      std::string method = step["method"].get<std::string>();
+
+      if (method == "acc-tan") {
+         op.action = Action::ACCUMULATION;
+         op.mode = Mode::TANGENT;
+      } else if (method == "acc-adj") {
+         op.action = Action::ACCUMULATION;
+         op.mode = Mode::ADJOINT;
+      } else if (method == "elim-mul") {
+         op.action = Action::MULTIPLICATION;
+         op.mode = Mode::NONE;
+      } else if (method == "elim-tan") {
+         op.action = Action::ELIMINATION;
+         op.mode = Mode::TANGENT;
+      } else if (method == "elim-adj") {
+         op.action = Action::ELIMINATION;
+         op.mode = Mode::ADJOINT;
+      }
+
+      const auto& indices = step["indices"];
+      if (op.action == Action::ACCUMULATION) {
+         op.i = std::stoul(indices[0].get<std::string>());
+         op.j = std::stoul(indices[1].get<std::string>()) - 1;
+      } else {
+         op.i = std::stoul(indices[0].get<std::string>());
+         op.k = std::stoul(indices[1].get<std::string>()) - 1;
+         op.j = std::stoul(indices[2].get<std::string>()) - 1;
+      }
+
+      if (step.contains("totalCost")) {
+         op.fma = step["totalCost"].get<std::size_t>();
+      }
+      if (step.contains("threadID")) {
+         op.thread = step["threadID"].get<std::size_t>();
+      }
+      if (step.contains("startTime")) {
+         op.start_time = step["startTime"].get<std::size_t>();
+      }
+
+      op.is_scheduled = false;
+      seq.push_back(op);
+   }
+
+   return seq;
+}
+
+/**
  * @brief Serializes a Sequence into a JSON string.
  *
  * @param seq The sequence to serialize.

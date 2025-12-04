@@ -63,18 +63,23 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
       m_pruned_branches.resize(m_chain.longest_possible_sequence() + 1);
    }
 
-   virtual auto solve() -> Sequence override final {
-
+   virtual auto solve(const Sequence& partial = {}) -> Sequence override final {
       set_timer(m_time_to_solve);
       start_timer();
       std::size_t accs = m_matrix_free ? 0 : (m_length - 1);
 
+      // Apply partial sequence and check validity
+      Sequence sequence = partial;
+      std::vector<OpPair> eliminations {};
+      JacobianChain chain = m_chain;
+      if (!chain.apply(sequence)) {
+         std::println("Partial sequence is invalid!");
+         return Sequence::make_max();
+      }
+
       #pragma omp parallel default(shared)
       #pragma omp single
-      while (++accs <= m_length) {
-         Sequence sequence {};
-         std::vector<OpPair> eliminations {};
-         JacobianChain chain = m_chain;
+      while (++accs <= m_length - chain.accumulated_jacobians()) {
          add_accumulation(sequence, chain, accs, eliminations);
       }
 

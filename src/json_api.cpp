@@ -14,7 +14,7 @@
 #include <iostream>
 #include <memory>
 
-#include "jcdp/json_api.h"
+#include "jcdp/json_api.hpp"
 
 #if defined(_OPENMP)
 #include <omp.h>
@@ -39,8 +39,8 @@
 extern "C" {
 
 uint32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
-     const char* json_str, const char* optimizer, const char* scheduler,
-     uint32_t omp_threads, uint32_t available_threads,
+     const char* chain_json, const char* sequence_json, const char* optimizer,
+     const char* scheduler, uint32_t omp_threads, uint32_t available_threads,
      uint32_t available_memory, uint32_t time_to_solve, bool matrix_free,
      const char** result_buffer) {
 
@@ -59,9 +59,11 @@ uint32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
    }
 
    jcdp::JacobianChain chain;
+   jcdp::Sequence partial_sequence;
    try {
-      chain = jcdp::util::jacobian_chain_from_json(json_str);
+      chain = jcdp::util::jacobian_chain_from_json(chain_json);
       chain.init_subchains();
+      partial_sequence = jcdp::util::sequence_from_json(sequence_json);
    } catch (const std::exception& e) {
       std::println(std::cerr, "JSON parsing error: {}", e.what());
       return 1;
@@ -76,10 +78,11 @@ uint32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
    dp_solver.set_available_threads(available_threads);
    dp_solver.set_available_memory(available_memory);
    dp_solver.set_matrix_free(matrix_free);
+   dp_solver.set_group_consecutive_eliminations(false);
 
    // DP Solve (always run DP first to get an upper bound)
    dp_solver.init(chain);
-   jcdp::Sequence dp_seq = dp_solver.solve();
+   jcdp::Sequence dp_seq = dp_solver.solve(partial_sequence);
    if (std::string(scheduler) == "list") {
       list_scheduler->schedule(dp_seq, dp_solver.m_usable_threads);
    } else if (std::string(scheduler) == "bnb") {
@@ -106,6 +109,7 @@ uint32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
    bnb_solver.set_available_memory(available_memory);
    bnb_solver.set_timer(time_to_solve);
    bnb_solver.set_matrix_free(matrix_free);
+   bnb_solver.set_group_consecutive_eliminations(false);
 
    if (std::string(scheduler) == "list") {
       bnb_solver.init(chain, list_scheduler);
@@ -117,7 +121,7 @@ uint32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
    }
 
    bnb_solver.set_upper_bound(dp_seq.makespan());
-   jcdp::Sequence bnb_seq = bnb_solver.solve();
+   jcdp::Sequence bnb_seq = bnb_solver.solve(partial_sequence);
 
    g_result_json = jcdp::util::sequence_to_json(bnb_seq);
    if (result_buffer) {

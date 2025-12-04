@@ -43,13 +43,16 @@ async function getModule() {
 //   uint32_t threads, uint32_t memory, uint32_t time_to_solve,
 //   char* result_buffer)
 export async function jcdp(
-  input: JCDPGraph | string,
+  graph: JCDPGraph | string,
+  partial_sequence: SequenceStep[] | string = [],
   options: JCDPOptions = {}
 ): Promise<SequenceStep[]> {
   const mod = await getModule();
 
   // Prepare input parameters for C function
-  const json_str = typeof input === 'string' ? input : JSON.stringify(input);
+  const graph_str = typeof graph === 'string' ? graph : JSON.stringify(graph);
+  const sequence_str =
+    typeof partial_sequence === 'string' ? partial_sequence : JSON.stringify(partial_sequence);
   const optimizer = options.optimizer || 'dp';
   const scheduler = options.scheduler || 'list';
   const omp_threads = options.OpenMPThreads || 1;
@@ -67,9 +70,21 @@ export async function jcdp(
     const ret = mod.ccall(
       'jcdp_run_from_json',
       'number',
-      ['string', 'string', 'string', 'number', 'number', 'number', 'number', 'number', 'number'],
       [
-        json_str,
+        'string',
+        'string',
+        'string',
+        'string',
+        'number',
+        'number',
+        'number',
+        'number',
+        'number',
+        'number',
+      ],
+      [
+        graph_str,
+        sequence_str,
         optimizer,
         scheduler,
         omp_threads,

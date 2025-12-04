@@ -6,3 +6,4 @@ available_memory 0
 matrix_free 1
 time_to_solve 30
 seed 1654771729
+group_consecutive_eliminations 0

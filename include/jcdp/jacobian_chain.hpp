@@ -17,6 +17,7 @@
 
 #include "jcdp/jacobian.hpp"
 #include "jcdp/operation.hpp"
+#include "jcdp/sequence.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
@@ -46,10 +47,26 @@ struct JacobianChain {
             sub_chains[idx].m = elemental_jacobians[j].m;
 
             for (std::size_t k = i; k <= j; ++k) {
+               if (elemental_jacobians[k].edges_in_dag == 0) {
+                  sub_chains[idx].edges_in_dag = 0;
+                  break;
+               }
                sub_chains[idx].edges_in_dag +=
                     elemental_jacobians[k].edges_in_dag;
+            }
+           for (std::size_t k = i; k <= j; ++k) {
+               if (elemental_jacobians[k].tangent_cost == 0) {
+                  sub_chains[idx].tangent_cost = 0;
+                  break;
+               }
                sub_chains[idx].tangent_cost +=
                     elemental_jacobians[k].tangent_cost;
+            }
+           for (std::size_t k = i; k <= j; ++k) {
+               if (elemental_jacobians[k].adjoint_cost == 0) {
+                  sub_chains[idx].adjoint_cost = 0;
+                  break;
+               }
                sub_chains[idx].adjoint_cost +=
                     elemental_jacobians[k].adjoint_cost;
             }
@@ -70,7 +87,7 @@ struct JacobianChain {
          switch (op.mode) {
             case Mode::TANGENT: {
                if (!ki_jac.is_accumulated || ki_jac.is_used ||
-                   jk_jac.is_accumulated) {
+                   jk_jac.is_accumulated || jk_jac.fma<Mode::TANGENT>() == 0) {
                   return false;
                }
                jk_jac.is_accumulated = true;
@@ -79,7 +96,7 @@ struct JacobianChain {
 
             case Mode::ADJOINT: {
                if (!jk_jac.is_accumulated || jk_jac.is_used ||
-                   ki_jac.is_accumulated) {
+                   ki_jac.is_accumulated || ki_jac.fma<Mode::ADJOINT>() == 0) {
                   return false;
                }
                ki_jac.is_accumulated = true;
@@ -102,6 +119,15 @@ struct JacobianChain {
       }
 
       ij_jac.is_accumulated = true;
+      return true;
+   }
+
+   inline auto apply(const Sequence& seq) -> bool {
+      for (const Operation& op : seq) {
+         if (!apply(op)) {
+            return false;
+         }
+      }
       return true;
    }
 

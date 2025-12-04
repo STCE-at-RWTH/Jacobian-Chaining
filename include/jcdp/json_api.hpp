@@ -8,7 +8,8 @@ extern "C" {
 /**
  * @brief Runs the JCDP solver based on a JSON configuration string.
  *
- * @param json_str          The JSON string describing the Jacobian chain.
+ * @param chain_json        The JSON string describing the Jacobian chain.
+ * @param sequence_json     The JSON string describing a partial sequence.
  * @param optimizer         The optimizer to use ("dp" or "bnb").
  * @param scheduler         The scheduler to use ("list" or "bnb").
  * @param omp_threads       The number of OpenMP threads available.
@@ -22,8 +23,8 @@ extern "C" {
  * @return 0 on success, non-zero on error.
  */
 uint32_t jcdp_run_from_json(
-     const char* json_str, const char* optimizer, const char* scheduler,
-     uint32_t omp_threads, uint32_t available_threads,
+     const char* chain_json, const char* sequence_json, const char* optimizer,
+     const char* scheduler, uint32_t omp_threads, uint32_t available_threads,
      uint32_t available_memory, uint32_t time_to_solve, bool matrix_free,
      const char** result_buffer);
 }

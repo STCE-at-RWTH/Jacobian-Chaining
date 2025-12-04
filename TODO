@@ -1,0 +1,2 @@
+- Solve with given partial elimination sequence
+- Global object that tracks B&B progress, solution, statistics and enables the user to pause, resume and abort the algorithm

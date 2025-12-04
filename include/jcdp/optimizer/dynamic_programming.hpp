@@ -57,12 +57,26 @@ class DynamicProgrammingOptimizer : public Optimizer {
       m_dptable.resize(dp_nodes);
    }
 
-   virtual auto solve() -> Sequence override final {
+   virtual auto solve(const Sequence& partial = {}) -> Sequence override final {
       const std::ptrdiff_t j_max = static_cast<std::ptrdiff_t>(m_length);
+
+      // Apply partial sequence and check validity
+      JacobianChain chain = m_chain;
+      if (!chain.apply(partial)) {
+         std::println(std::cerr, "Partial sequence is invalid!");
+         return Sequence::make_max();
+      }
 
       // Accumulation costs
       #pragma omp parallel for
       for (std::ptrdiff_t j = 0; j < j_max; ++j) {
+         if(check_accumulation_status(j)) {
+            continue;
+         }
+         if (check_partial_sequence(partial, j)) {
+            continue;
+         }
+
          try_accumulation<Mode::TANGENT>(j);
          try_accumulation<Mode::ADJOINT>(j);
       }
@@ -78,18 +92,29 @@ class DynamicProgrammingOptimizer : public Optimizer {
                const std::ptrdiff_t i = j - (len - 1);
 
                for (std::ptrdiff_t k = i; k < j; k++) {
+                  if (check_partial_sequence(partial, j, i, k, threads)) {
+                     continue;
+                  }
+
                   try_multiplication(j, i, k, threads);
 
                   if (m_matrix_free) {
-                     try_elimination<Mode::TANGENT>(j, i, k, threads);
-
-                     // Search for adjoint elimination from the back to the
-                     // to get the longest adjoint elimination chain possible.
-                     // Otherwise we get a lot of single adjoint eliminations
-                     // one after another. Doesn't affect fma, just reduces work
-                     // and makes output smaller.
                      const std::size_t k2 = j - (k - i + 1);
-                     try_elimination<Mode::ADJOINT>(j, i, k2, threads);
+
+                     if (m_group_consecutive_eliminations) {
+                        // Search for adjoint elimination from the back to the
+                        // to get the longest adjoint elimination chain
+                        // possible. Otherwise we get a lot of single adjoint
+                        // eliminations one after another. Doesn't affect fma,
+                        // just reduces work and makes output smaller.
+                        try_elimination<Mode::TANGENT>(j, i, k, threads);
+                        try_elimination<Mode::ADJOINT>(j, i, k2, threads);
+                     } else {
+                        // No grouping of eliminations, so search tangents from
+                        // the back, to split the eliminations.
+                        try_elimination<Mode::TANGENT>(j, i, k2, threads);
+                        try_elimination<Mode::ADJOINT>(j, i, k, threads);
+                     }
                   }
                }
             }
@@ -172,7 +197,7 @@ class DynamicProgrammingOptimizer : public Optimizer {
          } break;
 
          default: {
-            assert(false);
+            return seq.back().start_time;
          }
       }
 
@@ -202,6 +227,40 @@ class DynamicProgrammingOptimizer : public Optimizer {
       return m_dptable[idx];
    }
 
+   auto check_accumulation_status(const std::size_t j) -> bool {
+      if (m_chain.get_jacobian(j, j).is_accumulated) {
+         DPNode& fma_j = node(j, j, 1);
+         fma_j.op.i = j;
+         fma_j.op.j = j;
+         fma_j.op.k = j;
+         fma_j.cost = 0;
+         fma_j.thread_split = 0;
+         fma_j.visited = true;
+         return true;
+      }
+
+      return false;
+   }
+
+   auto check_partial_sequence(
+        const Sequence& partial, const std::size_t j,
+        const std::optional<size_t> i = {}, const std::optional<size_t> k = {},
+        const std::optional<size_t> t = {}) -> bool {
+
+      std::optional<Operation> existing_op = partial.get_operation(j, i, k);
+      if (existing_op.has_value()) {
+         DPNode& fma_ji = node(j, i.value_or(j), t.value_or(1));
+
+         fma_ji.op = existing_op.value();
+         fma_ji.thread_split = 0;
+         fma_ji.visited = true;
+         fma_ji.cost = 0;
+         return true;
+      }
+
+      return false;
+   }
+
    template<Mode mode>
    auto try_accumulation(const std::size_t j) -> void {
       std::size_t fma;
@@ -215,17 +274,23 @@ class DynamicProgrammingOptimizer : public Optimizer {
       }
 
       fma = m_chain.get_jacobian(j, j).fma<mode>();
-      DPNode& fma_ji = node(j, j, 1);
-      if (fma < fma_ji.cost) {
-         fma_ji.op.action = Action::ACCUMULATION;
-         fma_ji.op.mode = mode;
-         fma_ji.op.fma = fma;
-         fma_ji.op.i = j;
-         fma_ji.op.j = j;
-         fma_ji.op.k = j;
-         fma_ji.cost = fma;
-         fma_ji.thread_split = 0;
-         fma_ji.visited = true;
+
+      // No cost means there is no <mode> model for this Jacobian
+      if (fma == 0) {
+         return;
+      }
+
+      DPNode& fma_j = node(j, j, 1);
+      if (fma < fma_j.cost) {
+         fma_j.op.action = Action::ACCUMULATION;
+         fma_j.op.mode = mode;
+         fma_j.op.fma = fma;
+         fma_j.op.i = j;
+         fma_j.op.j = j;
+         fma_j.op.k = j;
+         fma_j.cost = fma;
+         fma_j.thread_split = 0;
+         fma_j.visited = true;
       }
    }
 
@@ -305,6 +370,12 @@ class DynamicProgrammingOptimizer : public Optimizer {
 
          fma = m_chain.get_jacobian(k, i).fma<mode>(
               m_chain.elemental_jacobians[j].m);
+
+         // No cost means there is no adjoint model for this Jacobian (chain)
+         if (fma == 0) {
+            return;
+         }
+
          cost = fma_jk.cost + fma;
       } else {
          const DPNode& fma_ki = node(k, i, t);
@@ -312,6 +383,12 @@ class DynamicProgrammingOptimizer : public Optimizer {
 
          fma = m_chain.get_jacobian(j, k + 1).fma<mode>(
               m_chain.elemental_jacobians[i].n);
+
+         // No cost means there is no tangent model for this Jacobian (chain)
+         if (fma == 0) {
+            return;
+         }
+
          cost = fma_ki.cost + fma;
       }
 

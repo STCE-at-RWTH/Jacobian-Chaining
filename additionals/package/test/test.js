@@ -76,7 +76,7 @@ async function run() {
           const expectedData = JSON.parse(fs.readFileSync(expectedPath, 'utf8'));
 
           const startTime = performance.now();
-          const result = await jcdp(chainData, {
+          const result = await jcdp(chainData, [], {
             optimizer: optimizer,
             scheduler: scheduler,
             OpenMPThreads: OpenMPThreads,
