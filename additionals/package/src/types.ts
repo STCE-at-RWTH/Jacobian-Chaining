@@ -20,17 +20,24 @@ export interface JCDPGraph {
   edges: JCDPEdge[];
 }
 
+export type EliminationType =
+  | 'node'
+  | 'edge-forward'
+  | 'edge-backward'
+  | 'face'
+  | 'accumulate-edge'
+  | 'accumulate-dual-node';
 export type GFEMethod = 'acc-tan' | 'acc-adj' | 'elim-tan' | 'elim-adj' | 'elim-mul';
 
-export interface SequenceStep {
-  kind: 'accumulate-edge' | 'face';
-  method: GFEMethod;
-  indices: string[];
-  totalCost: number;
+export type SequenceStep = {
+  kind: EliminationType;
+  method?: GFEMethod;
   fillIn: number;
-  threadID: number;
-  startTime: number;
-}
+  cost: number;
+  indices: string[];
+  threadID?: number;
+  startTime?: number;
+};
 
 export interface JCDPOptions {
   optimizer?: 'dp' | 'bnb';

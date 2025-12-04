@@ -252,8 +252,8 @@ inline auto sequence_from_json(const std::string& json_str) -> Sequence {
          op.j = std::stoul(indices[2].get<std::string>()) - 1;
       }
 
-      if (step.contains("totalCost")) {
-         op.fma = step["totalCost"].get<std::size_t>();
+      if (step.contains("cost")) {
+         op.fma = step["cost"].get<std::size_t>();
       }
       if (step.contains("threadID")) {
          op.thread = step["threadID"].get<std::size_t>();
@@ -308,7 +308,7 @@ inline auto sequence_to_json(const Sequence& seq) -> std::string {
          step["fillIn"] = -1;
       }
       step["indices"] = indices;
-      step["totalCost"] = op.fma;
+      step["cost"] = op.fma;
       step["threadID"] = op.thread;
       step["startTime"] = op.start_time;
       j.push_back(step);
