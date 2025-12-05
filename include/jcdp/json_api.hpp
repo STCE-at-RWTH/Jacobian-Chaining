@@ -6,6 +6,21 @@
 extern "C" {
 
 /**
+ * @brief Frees the result string associated with the given handle.
+ *
+ * @param handle The handle of the result to free.
+ */
+void jcdp_free_result(int32_t handle);
+
+/**
+ * @brief Gets the result string associated with the given handle.
+ *
+ * @param handle The handle of the result to get.
+ * @return const char* The result string, or nullptr if not found.
+ */
+const char* jcdp_get_result(int32_t handle);
+
+/**
  * @brief Runs the JCDP solver based on a JSON configuration string.
  *
  * @param chain_json        The JSON string describing the Jacobian chain.
@@ -16,17 +31,15 @@ extern "C" {
  * @param available_threads The limit on the number of threads in the solution.
  * @param available_memory  The amount of memory available for the solution.
  * @param time_to_solve     The time limit for the solver in seconds.
- * @param result_buffer     Output parameter. Will be set to point to a
- *                          null-terminated string containing the result JSON.
- *                          The string is managed by the library and is valid
- *                          until the next call to this function.
- * @return 0 on success, non-zero on error.
+ * @param handle            Output parameter. Will be set to the handle of the
+ *                          result.
+ * @return 0 on success, or an error code (<0) on failure.
  */
-uint32_t jcdp_run_from_json(
+int32_t jcdp_run_from_json(
      const char* chain_json, const char* sequence_json, const char* optimizer,
      const char* scheduler, uint32_t omp_threads, uint32_t available_threads,
      uint32_t available_memory, uint32_t time_to_solve, bool matrix_free,
-     const char** result_buffer);
+     int32_t* handle);
 }
 
 #endif  // JCDP_JSON_API_H

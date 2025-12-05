@@ -35,7 +35,7 @@ if(EMSCRIPTEN)
          "SHELL:-s EXPORT_NAME=createJCDPModule"
          "SHELL:-s ALLOW_MEMORY_GROWTH=0"
          "SHELL:-s PTHREAD_POOL_SIZE='navigator.hardwareConcurrency'"
-         "SHELL:-s EXPORTED_FUNCTIONS='[\"_malloc\", \"_free\"]'"
+         "SHELL:-s EXPORTED_FUNCTIONS='[\"_malloc\", \"_free\", \"_jcdp_run_from_json\", \"_jcdp_get_result\", \"_jcdp_free_result\"]'"
          "SHELL:-s EXPORTED_RUNTIME_METHODS='[\"ENV\",\"ccall\",\"cwrap\",\"getValue\",\"UTF8ToString\"]'"
          "SHELL:-s INITIAL_MEMORY=2147483648"
          "SHELL:-s EXPORT_ES6=1"
@@ -115,8 +115,13 @@ if(EMSCRIPTEN)
          COMMENT "Publishing NPM package"
       )
 
-      add_test(NAME test_npm_package
-         COMMAND ${NPM} test
+      add_test(NAME test_npm_package_sync
+         COMMAND ${NPM} run test:sync
+         WORKING_DIRECTORY ${NPM_PACKAGE_DIR}
+      )
+
+      add_test(NAME test_npm_package_worker
+         COMMAND ${NPM} run test:worker
          WORKING_DIRECTORY ${NPM_PACKAGE_DIR}
       )
    endif()

@@ -12,7 +12,9 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <map>
 #include <memory>
+#include <mutex>
 
 #include "jcdp/json_api.hpp"
 
@@ -36,26 +38,56 @@
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> APPLICATION <<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
+// Global storage for results to allow concurrent calls
+static std::map<int32_t, std::string> g_results;
+static int32_t g_next_handle = 1;
+static std::mutex g_results_mutex;
+
 extern "C" {
 
-uint32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
+/**
+ * @brief Frees the result string associated with the given handle.
+ *
+ * @param handle The handle of the result to free.
+ */
+void EMSCRIPTEN_KEEPALIVE jcdp_free_result(int32_t handle) {
+   std::lock_guard<std::mutex> lock(g_results_mutex);
+   g_results.erase(handle);
+}
+
+/**
+ * @brief Gets the result string associated with the given handle.
+ *
+ * @param handle The handle of the result to get.
+ * @return const char* The result string, or nullptr if not found.
+ */
+const char* EMSCRIPTEN_KEEPALIVE jcdp_get_result(int32_t handle) {
+   std::lock_guard<std::mutex> lock(g_results_mutex);
+   auto it = g_results.find(handle);
+   if (it != g_results.end()) {
+      return it->second.c_str();
+   }
+   return nullptr;
+}
+
+int32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
      const char* chain_json, const char* sequence_json, const char* optimizer,
      const char* scheduler, uint32_t omp_threads, uint32_t available_threads,
      uint32_t available_memory, uint32_t time_to_solve, bool matrix_free,
-     const char** result_buffer) {
-
-   // Static buffer to hold the result. This persists between calls, so we
-   // don't need to malloc/free manually from JS.
-   static std::string g_result_json;
+     int32_t* handle) {
 
 #if defined(_OPENMP)
    omp_set_num_threads(omp_threads);
 #endif
 
-   // Clear previous result
-   g_result_json.clear();
-   if (result_buffer) {
-      *result_buffer = nullptr;
+   int32_t current_handle = 0;
+   {
+      std::lock_guard<std::mutex> lock(g_results_mutex);
+      current_handle = g_next_handle++;
+   }
+
+   if (handle) {
+      *handle = current_handle;
    }
 
    jcdp::JacobianChain chain;
@@ -66,7 +98,7 @@ uint32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
       partial_sequence = jcdp::util::sequence_from_json(sequence_json);
    } catch (const std::exception& e) {
       std::println(std::cerr, "JSON parsing error: {}", e.what());
-      return 1;
+      return -1;
    }
 
    std::shared_ptr<jcdp::scheduler::PriorityListScheduler> list_scheduler =
@@ -89,45 +121,46 @@ uint32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
       bnb_scheduler->schedule(dp_seq, dp_solver.m_usable_threads);
    } else if (std::string(scheduler) != "none") {
       std::println(std::cerr, "Unknown scheduler: {}", scheduler);
-      return 2;
+      return -2;
    }
 
+   std::string result_json;
    if (std::string(optimizer) == "dp") {
       // Just return the DP solution
-      g_result_json = jcdp::util::sequence_to_json(dp_seq);
-      if (result_buffer) {
-         *result_buffer = g_result_json.c_str();
+      result_json = jcdp::util::sequence_to_json(dp_seq);
+   } else if (std::string(optimizer) == "bnb") {
+      jcdp::optimizer::BranchAndBoundOptimizer bnb_solver;
+      bnb_solver.set_available_threads(available_threads);
+      bnb_solver.set_available_memory(available_memory);
+      bnb_solver.set_matrix_free(matrix_free);
+      bnb_solver.set_timer(time_to_solve);
+      bnb_solver.set_group_consecutive_eliminations(false);
+
+      if (std::string(scheduler) == "list") {
+         bnb_solver.init(chain, list_scheduler);
+      } else if (std::string(scheduler) == "bnb") {
+         bnb_solver.init(chain, bnb_scheduler);
+      } else {
+         std::println(std::cerr, "Invalid scheduler for BnB: {}", scheduler);
+         return -4;
       }
-      return 0;
-   } else if (std::string(optimizer) != "bnb") {
-      std::println(std::cerr, "Unknown optimizer: {}", optimizer);
-      return 3;
-   }
 
-   jcdp::optimizer::BranchAndBoundOptimizer bnb_solver;
-   bnb_solver.set_available_threads(available_threads);
-   bnb_solver.set_available_memory(available_memory);
-   bnb_solver.set_timer(time_to_solve);
-   bnb_solver.set_matrix_free(matrix_free);
-   bnb_solver.set_group_consecutive_eliminations(false);
+      bnb_solver.set_upper_bound(dp_seq.makespan());
+      jcdp::Sequence bnb_seq = bnb_solver.solve(partial_sequence);
 
-   if (std::string(scheduler) == "list") {
-      bnb_solver.init(chain, list_scheduler);
-   } else if (std::string(scheduler) == "bnb") {
-      bnb_solver.init(chain, bnb_scheduler);
+      result_json = jcdp::util::sequence_to_json(bnb_seq);
    } else {
-      std::println(std::cerr, "Invalid scheduler: {}", scheduler);
-      return 4;
+      std::println(std::cerr, "Unknown optimizer: {}", optimizer);
+      return -3;
    }
 
-   bnb_solver.set_upper_bound(dp_seq.makespan());
-   jcdp::Sequence bnb_seq = bnb_solver.solve(partial_sequence);
-
-   g_result_json = jcdp::util::sequence_to_json(bnb_seq);
-   if (result_buffer) {
-      *result_buffer = g_result_json.c_str();
+   // Store result in map
+   {
+      std::scoped_lock<std::mutex> lock{g_results_mutex};
+      g_results[current_handle] = std::move(result_json);
    }
 
    return 0;
 }
-}
+
+}  // extern "C"

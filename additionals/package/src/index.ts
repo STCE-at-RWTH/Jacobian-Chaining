@@ -1,123 +1,116 @@
 import { JCDPGraph, JCDPOptions, SequenceStep } from './types.js';
-import createJCDPModule from '../lib/jcdp.js';
+import { WorkerMessage, WorkerResponse } from './worker.js';
 
-// Resolve assets using import.meta.url. Bundlers (Vite/Webpack) will see these,
-// bundle the files, and replace these variables with the final public URLs.
-const wasmUrl = new URL('../lib/jcdp.wasm', import.meta.url).href;
-const jsUrlObj = new URL('../lib/jcdp.js', import.meta.url);
-const jsUrl = jsUrlObj.href;
+// Export types
+export type * from './types.js';
+export { jcdpSync } from './core.js';
 
-const isNode =
-  typeof process !== 'undefined' && process.versions != null && process.versions.node != null;
+// Helper to manage the worker
+// We use 'any' for worker to support both Web Worker and Node Worker wrapper
+let worker: any = null;
+let nextMessageId = 1;
+const pendingRequests = new Map<
+  number,
+  { resolve: (val: any) => void; reject: (err: any) => void }
+>();
 
-let moduleInstance: any = null;
+async function getWorker(): Promise<any> {
+  if (worker) return worker;
 
-async function getModule() {
-  if (!moduleInstance) {
-    let mainScript = jsUrl;
-    if (isNode && jsUrlObj.protocol === 'file:') {
-      // In Node.js, we need to provide the mainScript as a file path
-      const { fileURLToPath } = await import('url');
-      mainScript = fileURLToPath(jsUrlObj);
-    }
-
-    moduleInstance = await createJCDPModule({
-      locateFile: (path: string) => {
-        if (path.endsWith('.wasm')) {
-          return wasmUrl;
-        }
-        if (path.endsWith('.js')) {
-          return jsUrl;
-        }
-        return path;
-      },
-      mainScriptUrlOrBlob: mainScript,
+  if (typeof Worker !== 'undefined') {
+    // Web Environment
+    worker = new Worker(new URL('./worker.js', import.meta.url), {
+      type: 'module',
     });
+
+    worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+      handleWorkerResponse(event.data);
+    };
+
+    worker.onerror = (error: any) => {
+      console.error('JCDP Worker Error:', error);
+    };
+  } else {
+    // Node.js Environment
+    try {
+      const { Worker } = await import('node:worker_threads');
+      const workerPath = new URL('./worker.js', import.meta.url);
+      const nw = new Worker(workerPath);
+
+      // Adapter to match Web Worker interface partially
+      worker = {
+        postMessage: (data: any) => nw.postMessage(data),
+        terminate: () => nw.terminate(),
+      };
+
+      nw.on('message', (data: WorkerResponse) => {
+        handleWorkerResponse(data);
+      });
+
+      nw.on('error', (error: any) => {
+        console.error('JCDP Worker Error:', error);
+      });
+    } catch (e) {
+      console.error('Failed to initialize worker in Node.js environment', e);
+      throw e;
+    }
   }
-  return moduleInstance;
+  return worker;
 }
 
-// Wrapper to call JCDP from JavaScript/TypeScript. C signature:
-// uint32_t jcdp_run_from_json(
-//   const char* json_str, const char* optimizer, const char* scheduler,
-//   uint32_t threads, uint32_t memory, uint32_t time_to_solve,
-//   char* result_buffer)
-export async function jcdp(
+function handleWorkerResponse(data: WorkerResponse) {
+  const { id, success, result, error } = data;
+  const request = pendingRequests.get(id);
+
+  if (request) {
+    if (success) {
+      request.resolve(result);
+    } else {
+      request.reject(new Error(error));
+    }
+    pendingRequests.delete(id);
+  }
+}
+
+/**
+ * Runs the JCDP algorithm in a background Web Worker.
+ * This prevents blocking the main thread during long calculations.
+ */
+export function jcdp(
   graph: JCDPGraph | string,
   partial_sequence: SequenceStep[] | string = [],
   options: JCDPOptions = {}
 ): Promise<SequenceStep[]> {
-  const mod = await getModule();
+  return new Promise(async (resolve, reject) => {
+    try {
+      const w = await getWorker();
+      const id = nextMessageId++;
 
-  // Prepare input parameters for C function
-  const graph_str = typeof graph === 'string' ? graph : JSON.stringify(graph);
-  const sequence_str =
-    typeof partial_sequence === 'string' ? partial_sequence : JSON.stringify(partial_sequence);
-  const optimizer = options.optimizer || 'dp';
-  const scheduler = options.scheduler || 'list';
-  const omp_threads = options.OpenMPThreads || 1;
-  const available_threads = options.availableThreads || 1;
-  const available_memory = options.availableMemory || 0;
-  const time_to_solve = options.timeToSolve || 60;
-  const matrix_free = options.matrixFree ? 1 : 0;
+      pendingRequests.set(id, { resolve, reject });
 
-  // Allocate pointer to pointer for result
-  const result_buffer = mod._malloc(8);
+      const message: WorkerMessage = {
+        id,
+        type: 'run',
+        graph,
+        partial_sequence,
+        options,
+      };
 
-  try {
-    console.log(`Running JCDP with ${omp_threads} OpenMP threads`);
-    const startTime = performance.now();
-    const ret = mod.ccall(
-      'jcdp_run_from_json',
-      'number',
-      [
-        'string',
-        'string',
-        'string',
-        'string',
-        'number',
-        'number',
-        'number',
-        'number',
-        'number',
-        'number',
-      ],
-      [
-        graph_str,
-        sequence_str,
-        optimizer,
-        scheduler,
-        omp_threads,
-        available_threads,
-        available_memory,
-        time_to_solve,
-        matrix_free,
-        result_buffer,
-      ]
-    );
-    const endTime = performance.now();
-    console.log(`JCDP execution took ${(endTime - startTime).toFixed(2)} ms`);
-
-    if (ret !== 0) {
-      throw new Error(`JCDP execution failed with code ${ret}`);
+      w.postMessage(message);
+    } catch (e) {
+      reject(e);
     }
-
-    // Read the result pointer from the pointer-pointer
-    const resultPtr = mod.getValue(result_buffer, 'i8*');
-
-    if (resultPtr === 0) {
-      return [];
-    }
-
-    let resultJson: string = '';
-    if (mod.UTF8ToString) {
-      resultJson = mod.UTF8ToString(resultPtr);
-    }
-
-    return JSON.parse(resultJson) as SequenceStep[];
-  } finally {
-    mod._free(result_buffer);
-  }
+  });
 }
 
-export type * from './types.js';
+/**
+ * Terminates the background worker.
+ * Call this when you are done with JCDP to free up resources.
+ */
+export function terminateJCDPWorker() {
+  if (worker) {
+    worker.terminate();
+    worker = null;
+    pendingRequests.clear();
+  }
+}

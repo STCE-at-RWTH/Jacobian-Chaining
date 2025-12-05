@@ -18,7 +18,9 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "node test/test.js",
+    "test": "npm run test:sync && npm run test:worker",
+    "test:sync": "node test/test.js",
+    "test:worker": "node test/test_worker.js",
     "prepublishOnly": "npm run build",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
