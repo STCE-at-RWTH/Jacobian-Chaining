@@ -19,8 +19,8 @@
   "scripts": {
     "build": "tsc",
     "test": "npm run test:sync && npm run test:worker",
-    "test:sync": "node test/test.js",
-    "test:worker": "node test/test_worker.js",
+    "test:sync": "node --loader ts-node/esm test/test.ts",
+    "test:worker": "node --loader ts-node/esm test/test_worker.ts",
     "prepublishOnly": "npm run build",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
@@ -39,6 +39,7 @@
   "license": "CC-BY-4.0",
   "devDependencies": {
     "typescript": "^5.0.0",
+    "ts-node": "^10.9.1",
     "@types/node": "^20.0.0",
     "prettier": "^3.6.2"
   }

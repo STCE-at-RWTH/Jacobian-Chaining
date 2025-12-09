@@ -70,7 +70,7 @@ class DynamicProgrammingOptimizer : public Optimizer {
       // Accumulation costs
       #pragma omp parallel for
       for (std::ptrdiff_t j = 0; j < j_max; ++j) {
-         if(check_accumulation_status(j)) {
+         if (check_accumulation_status(j)) {
             continue;
          }
          if (check_partial_sequence(partial, j)) {

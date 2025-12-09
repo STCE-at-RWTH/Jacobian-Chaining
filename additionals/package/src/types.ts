@@ -48,3 +48,12 @@ export interface JCDPOptions {
   timeToSolve?: number;
   matrixFree?: boolean;
 }
+
+export interface JCDPStats {
+  leafsVisited: number;
+  prunedBranches: number;
+  runtimeMs: number;
+  estimatedSearchSpace: number;
+  state: number; // 0: Running, 1: Paused, 2: Cancelled, 3: Done
+  result?: SequenceStep[];
+}

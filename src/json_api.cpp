@@ -39,7 +39,7 @@
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> APPLICATION <<<<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
 // Global storage for results to allow concurrent calls
-static std::map<int32_t, std::string> g_results;
+static std::map<int32_t, std::shared_ptr<jcdp::SolverState>> g_states;
 static int32_t g_next_handle = 1;
 static std::mutex g_results_mutex;
 
@@ -52,42 +52,58 @@ extern "C" {
  */
 void EMSCRIPTEN_KEEPALIVE jcdp_free_result(int32_t handle) {
    std::lock_guard<std::mutex> lock(g_results_mutex);
-   g_results.erase(handle);
+   g_states.erase(handle);
+}
+
+int32_t EMSCRIPTEN_KEEPALIVE jcdp_init() {
+   std::lock_guard<std::mutex> lock(g_results_mutex);
+   int32_t new_handle = g_next_handle++;
+   g_states[new_handle] = std::make_shared<jcdp::SolverState>();
+   return new_handle;
 }
 
 /**
- * @brief Gets the result string associated with the given handle.
+ * @brief Gets the raw pointer to the SolverState for the given handle.
  *
- * @param handle The handle of the result to get.
- * @return const char* The result string, or nullptr if not found.
+ * @param handle The handle of the execution.
+ * @return Pointer to SolverState, or nullptr if not found.
  */
-const char* EMSCRIPTEN_KEEPALIVE jcdp_get_result(int32_t handle) {
+void* EMSCRIPTEN_KEEPALIVE jcdp_get_state_ptr(int32_t handle) {
    std::lock_guard<std::mutex> lock(g_results_mutex);
-   auto it = g_results.find(handle);
-   if (it != g_results.end()) {
-      return it->second.c_str();
+   auto it = g_states.find(handle);
+   if (it != g_states.end()) {
+      return it->second.get();
    }
    return nullptr;
 }
 
 int32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
+     int32_t handle,
      const char* chain_json, const char* sequence_json, const char* optimizer,
      const char* scheduler, uint32_t omp_threads, uint32_t available_threads,
-     uint32_t available_memory, uint32_t time_to_solve, bool matrix_free,
-     int32_t* handle) {
+     uint32_t available_memory, uint32_t time_to_solve, bool matrix_free) {
 
 #if defined(_OPENMP)
    omp_set_num_threads(omp_threads);
 #endif
 
-   int32_t current_handle = 0;
+   int32_t current_handle = handle;
+   std::shared_ptr<jcdp::SolverState> current_state = nullptr;
+
    {
       std::lock_guard<std::mutex> lock(g_results_mutex);
-      current_handle = g_next_handle++;
-   }
-
-   if (handle) {
-      *handle = current_handle;
+      // If no valid handle provided, create a new one
+      if (current_handle == 0) {
+         current_handle = g_next_handle++;
+         g_states[current_handle] = std::make_shared<jcdp::SolverState>();
+      } else {
+         // Verify handle exists
+         if (g_states.find(current_handle) == g_states.end()) {
+            g_next_handle = std::max(g_next_handle, current_handle + 1);
+            g_states[current_handle] = std::make_shared<jcdp::SolverState>();
+         }
+      }
+      current_state = g_states[current_handle];
    }
 
    jcdp::JacobianChain chain;
@@ -124,10 +140,10 @@ int32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
       return -2;
    }
 
-   std::string result_json;
    if (std::string(optimizer) == "dp") {
       // Just return the DP solution
-      result_json = jcdp::util::sequence_to_json(dp_seq);
+      current_state->optimal_sequence = dp_seq;
+      current_state->state = jcdp::StateControl::DONE;
    } else if (std::string(optimizer) == "bnb") {
       jcdp::optimizer::BranchAndBoundOptimizer bnb_solver;
       bnb_solver.set_available_threads(available_threads);
@@ -137,9 +153,9 @@ int32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
       bnb_solver.set_group_consecutive_eliminations(false);
 
       if (std::string(scheduler) == "list") {
-         bnb_solver.init(chain, list_scheduler);
+         bnb_solver.init(chain, list_scheduler, current_state);
       } else if (std::string(scheduler) == "bnb") {
-         bnb_solver.init(chain, bnb_scheduler);
+         bnb_solver.init(chain, bnb_scheduler, current_state);
       } else {
          std::println(std::cerr, "Invalid scheduler for BnB: {}", scheduler);
          return -4;
@@ -147,17 +163,10 @@ int32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
 
       bnb_solver.set_upper_bound(dp_seq.makespan());
       jcdp::Sequence bnb_seq = bnb_solver.solve(partial_sequence);
-
-      result_json = jcdp::util::sequence_to_json(bnb_seq);
+      current_state->optimal_sequence = bnb_seq;
    } else {
       std::println(std::cerr, "Unknown optimizer: {}", optimizer);
       return -3;
-   }
-
-   // Store result in map
-   {
-      std::scoped_lock<std::mutex> lock{g_results_mutex};
-      g_results[current_handle] = std::move(result_json);
    }
 
    return 0;

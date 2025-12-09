@@ -25,10 +25,13 @@
 #include "jcdp/jacobian.hpp"
 #include "jcdp/jacobian_chain.hpp"
 #include "jcdp/operation.hpp"
+#include "jcdp/control.hpp"
 #include "jcdp/optimizer/optimizer.hpp"
 #include "jcdp/scheduler/scheduler.hpp"
 #include "jcdp/sequence.hpp"
+#include "jcdp/util/math.hpp"
 #include "jcdp/util/timer.hpp"
+#include "jcdp/util/json.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
@@ -48,23 +51,44 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
 
    auto init(
         const JacobianChain& chain,
-        const std::shared_ptr<scheduler::Scheduler>& sched) -> void {
+        const std::shared_ptr<scheduler::Scheduler>& sched,
+        const std::shared_ptr<jcdp::SolverState>& control = nullptr) -> void {
       Optimizer::init(chain);
 
       m_scheduler = sched;
-      m_optimal_sequence = Sequence::make_max();
-      m_makespan = m_optimal_sequence.makespan();
-      m_upper_bound = m_makespan;
-      m_timer_expired = false;
+      m_control = control;
+      if (!m_control) {
+         m_control = std::make_shared<jcdp::SolverState>();
+      }
 
-      m_leafs = 0;
-      m_updated_makespan = 0;
-      m_pruned_branches.clear();
-      m_pruned_branches.resize(m_chain.longest_possible_sequence() + 1);
+      m_makespan = m_control->optimal_sequence.makespan();
+      m_upper_bound = m_makespan;
    }
 
    virtual auto solve(const Sequence& partial = {}) -> Sequence override final {
       set_timer(m_time_to_solve);
+
+      if (m_control->state != StateControl::RESTART) {
+         m_control->pruned_branches_per_length.clear();
+         m_control->pruned_branches_per_length.resize(m_chain.longest_possible_sequence() + 1);
+         m_control->visited_leafs = 0;
+         m_control->updated_makespans = 0;
+         m_control->runtime_ms = 0.0;
+         m_control->estimated_search_space = 0.0;
+
+         // Calculate total tasks to reserve vector
+         std::size_t total_tasks = 0;
+         std::size_t current_accs = m_matrix_free ? 0 : (m_length - 1);
+         std::size_t max_accs = m_length - m_chain.accumulated_jacobians();
+         while (++current_accs <= max_accs) {
+            total_tasks += util::nCr(m_chain.length(), current_accs);
+         }
+         m_control->finished_level_1_tasks.assign(total_tasks + 1, false);
+         m_task_id = 0;
+      }
+
+      m_control->state = StateControl::RUN;
+      std::println("Starting Branch & Bound optimization ...");
       start_timer();
       std::size_t accs = m_matrix_free ? 0 : (m_length - 1);
 
@@ -82,8 +106,11 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
       while (++accs <= m_length - chain.accumulated_jacobians()) {
          add_accumulation(sequence, chain, accs, eliminations);
       }
+      #pragma omp taskwait
 
-      return m_optimal_sequence;
+      m_control->state = StateControl::DONE;
+      std::println("Finishing Branch & Bound optimization ...");
+      return m_control->optimal_sequence;
    }
 
    inline auto set_upper_bound(const std::size_t upper_bound) {
@@ -91,27 +118,15 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
    }
 
    inline auto print_stats() -> void {
-      std::println("Leafs visited (= sequences scheduled): {}", m_leafs);
-      std::println("Updated makespan: {}", m_updated_makespan);
-      std::println(
-           "Pruned branches: {}",
-           std::reduce(m_pruned_branches.cbegin(), m_pruned_branches.cend()));
-      std::println("Pruned branches per sequence length:");
-      std::print("[ ");
-      for (const std::size_t pruned : m_pruned_branches) {
-         std::print("{} ", pruned);
-      }
-      std::println("]");
+      m_control->print_stats();
    }
 
  private:
-   Sequence m_optimal_sequence {Sequence::make_max()};
-   std::size_t m_makespan {m_optimal_sequence.makespan()};
+   std::size_t m_makespan {};
    std::size_t m_upper_bound {m_makespan};
-   std::size_t m_leafs {0};
-   std::vector<std::size_t> m_pruned_branches {};
-   std::size_t m_updated_makespan {0};
    std::shared_ptr<scheduler::Scheduler> m_scheduler;
+   std::shared_ptr<jcdp::SolverState> m_control;
+   std::size_t m_task_id {0};
 
    using Optimizer::init;
 
@@ -140,9 +155,24 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
          JacobianChain task_chain = chain;
          std::vector<OpPair> task_eliminations = eliminations;
 
-         #pragma omp task default(none) firstprivate(task_sequence)            \
+         #pragma omp atomic
+         m_control->estimated_search_space += estimated_search_space(chain);
+
+         // If this level 1 task was already finished in an earlier call, skip it
+         m_task_id++;
+         std::size_t task_id = m_task_id;
+         if (m_control->finished_level_1_tasks[task_id]) {
+            return;
+         }
+
+         #pragma omp task default(none) firstprivate(task_id, task_sequence)   \
                           firstprivate(task_chain, task_eliminations)
-         add_elimination(task_sequence, task_chain, task_eliminations);
+         {
+            add_elimination(task_sequence, task_chain, task_eliminations, 0);
+            #pragma omp taskwait
+
+            m_control->finished_level_1_tasks[task_id] = true;
+         }
       }
    }
 
@@ -182,13 +212,20 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
                m_timer_expired |= !scheduler->finished_in_time();
 
                #pragma omp atomic
-               m_leafs++;
+               m_control->visited_leafs++;
 
-               #pragma omp critical
+               #pragma omp critical (runtime)
+               m_control->runtime_ms = this->elapsed_time() / 1'000.0;
+
+               #pragma omp critical (new_best_sequence)
                if (m_makespan > new_makespan) {
-                  m_optimal_sequence = final_sequence;
+                  m_control->optimal_sequence = final_sequence;
+                  m_control->optimal_sequence_json =
+                       util::sequence_to_json(final_sequence);
+                  m_control->result_ptr =
+                       m_control->optimal_sequence_json.c_str();
+                  m_control->updated_makespans++;
                   m_makespan = new_makespan;
-                  m_updated_makespan++;
                }
             }
          }
@@ -198,10 +235,13 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
       // Check critical path as lower bound
       const std::size_t lower_bound = sequence.critical_path();
       if (lower_bound >= m_makespan || lower_bound > m_upper_bound) {
-         std::size_t& prune_counter = m_pruned_branches[sequence.length()];
+         std::size_t& prune_counter = m_control->pruned_branches_per_length[sequence.length()];
 
          #pragma omp atomic
          prune_counter++;
+
+         #pragma omp atomic
+         m_control->pruned_branches++;
 
          return;
       }
@@ -209,6 +249,10 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
       // Perform all possible elimination from the current elim_idx
       for (; elim_idx < eliminations.size(); ++elim_idx) {
          for (std::size_t pair_idx = 0; pair_idx <= 1; ++pair_idx) {
+            if (m_control && !m_control->barrier(this)) {
+               return;
+            }
+
             if (!eliminations[elim_idx][pair_idx].has_value()) {
                continue;
             }
@@ -221,7 +265,8 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
             push_possible_eliminations(chain, eliminations, op.j, op.i);
             sequence.push_back(op);
 
-            add_elimination(sequence, chain, eliminations, elim_idx + 1);
+            add_elimination(
+                 sequence, chain, eliminations, elim_idx + 1);
 
             sequence.pop_back();
             eliminations.pop_back();
@@ -337,6 +382,25 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
       }
 
       eliminations.push_back(ops);
+   }
+
+   inline auto estimated_search_space(const JacobianChain &chain) -> double {
+      size_t i = 0;
+      while (!chain.get_jacobian(i, i).is_accumulated && i < chain.length()) {
+         ++i;
+      }
+
+      size_t j = chain.length() - 1;
+      while (!chain.get_jacobian(j, j).is_accumulated && j > i) {
+         --j;
+      }
+
+      size_t accs = 1;
+      for (size_t k = 1; k <= (j - i + 1); ++k) {
+         accs *= k;
+      }
+
+      return static_cast<double>(accs);
    }
 };
 

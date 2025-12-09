@@ -54,7 +54,7 @@ struct JacobianChain {
                sub_chains[idx].edges_in_dag +=
                     elemental_jacobians[k].edges_in_dag;
             }
-           for (std::size_t k = i; k <= j; ++k) {
+            for (std::size_t k = i; k <= j; ++k) {
                if (elemental_jacobians[k].tangent_cost == 0) {
                   sub_chains[idx].tangent_cost = 0;
                   break;
@@ -62,7 +62,7 @@ struct JacobianChain {
                sub_chains[idx].tangent_cost +=
                     elemental_jacobians[k].tangent_cost;
             }
-           for (std::size_t k = i; k <= j; ++k) {
+            for (std::size_t k = i; k <= j; ++k) {
                if (elemental_jacobians[k].adjoint_cost == 0) {
                   sub_chains[idx].adjoint_cost = 0;
                   break;

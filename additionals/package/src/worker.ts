@@ -4,36 +4,40 @@ import { JCDPGraph, JCDPOptions, SequenceStep } from './types.js';
 // Define the message format
 export type WorkerMessage = {
   id: number;
-  type: 'run';
   graph: JCDPGraph | string;
   partial_sequence: SequenceStep[] | string;
   options: JCDPOptions;
+  handle: number;
 };
 
 export type WorkerResponse = {
   id: number;
   success: boolean;
-  result?: SequenceStep[];
   error?: string;
 };
 
-async function handleMessage(data: WorkerMessage, postMessage: (response: WorkerResponse) => void) {
-  const { id, type, graph, partial_sequence, options } = data;
+const activeHandles = new Map<number, number>();
 
-  if (type === 'run') {
-    try {
-      const result = await jcdpSync(graph, partial_sequence, options);
-      postMessage({ id, success: true, result });
-    } catch (error: any) {
-      postMessage({
-        id,
-        success: false,
-        error: error.message || String(error),
-      });
+async function handleMessage(data: WorkerMessage, postMessage: (response: WorkerResponse) => void) {
+  const { id, graph, partial_sequence, options, handle } = data;
+  try {
+    activeHandles.set(id, handle);
+    const usedHandle = await jcdpSync(graph, partial_sequence, options, handle);
+    if (usedHandle !== handle) {
+      throw new Error(`jcdpSync returned unexpected handle ${usedHandle}, expected ${handle}`);
     }
+
+    postMessage({ id, success: true });
+  } catch (error: any) {
+    postMessage({
+      id,
+      success: false,
+      error: error.message || String(error),
+    });
+  } finally {
+    activeHandles.delete(id);
   }
 }
-
 // Browser / Web Worker environment
 if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
   self.onmessage = (event: MessageEvent<WorkerMessage>) => {
