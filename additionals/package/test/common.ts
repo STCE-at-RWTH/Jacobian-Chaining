@@ -15,11 +15,11 @@ export interface TestCase {
 }
 
 export const testCases: TestCase[] = [
-  //   { optimizer: 'dp', scheduler: 'none', expectedFile: 'dp_none.json' },
-  //   { optimizer: 'dp', scheduler: 'list', expectedFile: 'dp_list.json' },
-  //   { optimizer: 'dp', scheduler: 'bnb', expectedFile: 'dp_bnb.json' },
+  { optimizer: 'dp', scheduler: 'none', expectedFile: 'dp_none.json' },
+  { optimizer: 'dp', scheduler: 'list', expectedFile: 'dp_list.json' },
+  { optimizer: 'dp', scheduler: 'bnb', expectedFile: 'dp_bnb.json' },
   { optimizer: 'bnb', scheduler: 'list', expectedFile: 'bnb_list.json' },
-  //   { optimizer: 'bnb', scheduler: 'bnb', expectedFile: 'bnb_bnb.json' },
+  { optimizer: 'bnb', scheduler: 'bnb', expectedFile: 'bnb_bnb.json' },
 ];
 
 export interface TestConfig {
@@ -84,7 +84,7 @@ export async function runTests(
       const chainPath = path.join(currentDataDir, 'chain.json');
       const chainData = fs.readFileSync(chainPath, 'utf8');
 
-      for (const OpenMPThreads of [1]) {
+      for (const OpenMPThreads of [1, 2, 4]) {
         for (const testCase of testCases) {
           const { optimizer, scheduler, expectedFile } = testCase;
           console.log(

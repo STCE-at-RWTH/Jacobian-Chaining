@@ -12,9 +12,8 @@ const isNode =
 
 let moduleInstance: any = null;
 
-async function getJCDPModule() {
+export async function getJCDPModule() {
   if (!moduleInstance) {
-    console.log('Loading JCDP Module...');
     let mainScript = jsUrl;
     if (isNode && jsUrlObj.protocol === 'file:') {
       // In Node.js, we need to provide the mainScript as a file path
@@ -39,6 +38,9 @@ async function getJCDPModule() {
 }
 
 const statePtrMap = new Map<number, number>();
+const HEAP8Map = new Map<number, Uint8Array>();
+const HEAP32Map = new Map<number, Uint32Array>();
+const HEAPF64Map = new Map<number, Float64Array>();
 
 export async function jcdpGetStatePtr(handle: number): Promise<number> {
   const existing = statePtrMap.get(handle);
@@ -61,35 +63,51 @@ export async function jcdpInit(): Promise<number> {
   return handle;
 }
 
-function writeStateControl(mod: any, ptr: number, value: number) {
-  // StateControl stored at offset 12 bytes; use setValue for clarity.
-  mod.setValue(ptr + 12, value, 'i32');
+export function setHEAP8(handle: number, HEAP8: Uint8Array) {
+  HEAP8Map.set(handle, HEAP8);
+}
+
+export function setHEAP32(handle: number, HEAP32: Uint32Array) {
+  HEAP32Map.set(handle, HEAP32);
+}
+
+export function setHEAPF64(handle: number, HEAPF64: Float64Array) {
+  HEAPF64Map.set(handle, HEAPF64);
+}
+
+export function setStatePtr(handle: number, ptr: number) {
+  statePtrMap.set(handle, ptr);
+}
+
+function writeStateControl(HEAP32: Uint32Array, ptr: number, value: number) {
+  // StateControl stored at offset 12 bytes.
+  HEAP32[(ptr + 12) >> 2] = value;
 }
 
 export async function jcdpPause(handle: number): Promise<void> {
-  const mod = await getJCDPModule();
+  const HEAP32 = HEAP32Map.get(handle);
   const ptr = statePtrMap.get(handle);
-  if (ptr) {
+  if (HEAP32 && ptr) {
     // StateControl::PAUSE = 1.
-    writeStateControl(mod, ptr, 1);
+    writeStateControl(HEAP32, ptr, 1);
   }
 }
 
 export async function jcdpResume(handle: number): Promise<void> {
-  const mod = await getJCDPModule();
+  const HEAP32 = HEAP32Map.get(handle);
   const ptr = statePtrMap.get(handle);
-  if (ptr) {
+  if (HEAP32 && ptr) {
     // StateControl::RUN = 0.
-    writeStateControl(mod, ptr, 0);
+    writeStateControl(HEAP32, ptr, 0);
   }
 }
 
 export async function jcdpCancel(handle: number): Promise<void> {
-  const mod = await getJCDPModule();
+  const HEAP32 = HEAP32Map.get(handle);
   const ptr = statePtrMap.get(handle);
-  if (ptr) {
+  if (HEAP32 && ptr) {
     // StateControl::CANCEL = 2.
-    writeStateControl(mod, ptr, 2);
+    writeStateControl(HEAP32, ptr, 2);
   }
 }
 
@@ -105,31 +123,51 @@ export interface SolverState {
 }
 
 export async function jcdpGetState(handle: number): Promise<SolverState | null> {
-  const mod = await getJCDPModule();
-
-  console.log('jcdpGetState handle:', handle);
-  console.log('jcdpGetState PtrMap:', statePtrMap);
-
   // Fast path: read directly from SolverState memory (non-blocking)
   let ptr = statePtrMap.get(handle);
-  console.log('jcdpGetState ptr:', ptr);
   if (!ptr) {
     return null;
   }
 
-  const visited_leafs = mod.getValue(ptr, 'i32');
-  const updated_makespans = mod.getValue(ptr + 4, 'i32');
-  const pruned_branches = mod.getValue(ptr + 8, 'i32');
-  const state = mod.getValue(ptr + 12, 'i32');
-  const runtime_ms = mod.getValue(ptr + 16, 'double');
-  const estimated_search_space = mod.getValue(ptr + 24, 'double');
-  const explored_search_space = mod.getValue(ptr + 32, 'double');
-  const resultPtr = mod.getValue(ptr + 40, 'i32');
+  const mod = await getJCDPModule();
+  let HEAP8 = HEAP8Map.get(handle);
+  let HEAP32 = HEAP32Map.get(handle);
+  let HEAPF64 = HEAPF64Map.get(handle);
+  if (!HEAP8) {
+    HEAP8 = mod.HEAP8;
+  }
+  if (!HEAP32) {
+    HEAP32 = mod.HEAP32;
+  }
+  if (!HEAPF64) {
+    HEAPF64 = mod.HEAPF64;
+  }
+  if (!HEAP8 || !HEAP32 || !HEAPF64) {
+    return null;
+  }
+
+  const visited_leafs = HEAP32[ptr >> 2];
+  const updated_makespans = HEAP32[(ptr + 4) >> 2];
+  const pruned_branches = HEAP32[(ptr + 8) >> 2];
+  const state = HEAP32[(ptr + 12) >> 2];
+
+  // Double (8 bytes) - requires 8-byte alignment usually, or careful reading.
+  // Assuming standard alignment in the struct.
+  const runtime_ms = HEAPF64[(ptr + 16) >> 3];
+  const estimated_search_space = HEAPF64[(ptr + 24) >> 3];
+  const explored_search_space = HEAPF64[(ptr + 32) >> 3];
+
+  // Pointer to result string (Int8)
+  const resultPtr = HEAP32[(ptr + 40) >> 2];
 
   let result: SequenceStep[] = [];
-  if (resultPtr !== 0 && mod.UTF8ToString) {
-    const resultJson = mod.UTF8ToString(resultPtr);
-    result = JSON.parse(resultJson) as SequenceStep[];
+  if (resultPtr !== 0 && mod.UTF8ArrayToString) {
+    const resultJson = mod.UTF8ArrayToString(HEAP8, resultPtr);
+    try {
+      result = JSON.parse(resultJson) as SequenceStep[];
+    } catch (e) {
+      console.error('Failed to parse result JSON:', e);
+    }
   }
 
   return {

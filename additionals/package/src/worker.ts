@@ -1,4 +1,4 @@
-import { jcdpSync } from './core.js';
+import { jcdpSync, jcdpInit, jcdpGetStatePtr, getJCDPModule } from './core.js';
 import { JCDPGraph, JCDPOptions, SequenceStep } from './types.js';
 
 // Define the message format
@@ -7,30 +7,49 @@ export type WorkerMessage = {
   graph: JCDPGraph | string;
   partial_sequence: SequenceStep[] | string;
   options: JCDPOptions;
-  handle: number;
 };
 
 export type WorkerResponse = {
   id: number;
-  success: boolean;
+  type: 'init' | 'done';
+  success?: boolean;
+  handle?: number;
+  statePtr?: number;
+  HEAP8?: Uint8Array;
+  HEAP32?: Uint32Array;
+  HEAPF64?: Float64Array;
   error?: string;
 };
 
 const activeHandles = new Map<number, number>();
 
 async function handleMessage(data: WorkerMessage, postMessage: (response: WorkerResponse) => void) {
-  const { id, graph, partial_sequence, options, handle } = data;
+  const { id, graph, partial_sequence, options } = data;
   try {
+    const handle = await jcdpInit();
     activeHandles.set(id, handle);
+
+    postMessage({
+      id,
+      type: 'init',
+      success: true,
+      handle,
+      statePtr: await jcdpGetStatePtr(handle),
+      HEAP8: (await getJCDPModule()).HEAP8,
+      HEAP32: (await getJCDPModule()).HEAP32,
+      HEAPF64: (await getJCDPModule()).HEAPF64,
+    });
+
     const usedHandle = await jcdpSync(graph, partial_sequence, options, handle);
     if (usedHandle !== handle) {
       throw new Error(`jcdpSync returned unexpected handle ${usedHandle}, expected ${handle}`);
     }
 
-    postMessage({ id, success: true });
+    postMessage({ id, type: 'done', success: true });
   } catch (error: any) {
     postMessage({
       id,
+      type: 'done',
       success: false,
       error: error.message || String(error),
     });

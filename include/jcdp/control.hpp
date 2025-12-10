@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <print>
 #include <vector>
 #include "jcdp/sequence.hpp"
 #include "jcdp/util/timer.hpp"

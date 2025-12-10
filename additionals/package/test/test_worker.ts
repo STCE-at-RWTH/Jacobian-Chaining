@@ -8,27 +8,26 @@ const jcdpWorkerWrapper: JCDPFunction = async (
   options: JCDPOptions
 ) => {
   const job = jcdp(graph, seq, options);
-  console.log('Job started, waiting for handle... ', Date.now());
-  console.log('1');
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  await new Promise((resolve) => setTimeout(resolve, 100).unref());
   let stats = await job.getState();
-  console.log('4');
-  console.log('Initial stats:', stats);
+  console.log('Initial stats:', stats?.state);
 
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  await new Promise((resolve) => setTimeout(resolve, 100).unref());
   await job.pause();
   stats = await job.getState();
-  console.log('Stats after pause:', stats);
-  job.resume();
+  console.log('Stats after pause:', stats?.state);
 
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  await new Promise((resolve) => setTimeout(resolve, 100).unref());
   stats = await job.getState();
-  console.log('Stats after resume:', stats);
+  console.log('Stats before resume:', stats?.state);
+  job.resume();
+  stats = await job.getState();
+  console.log('Stats after resume:', stats?.state);
 
   await job;
 
   stats = await job.getState();
-  console.log('Done:', stats);
+  console.log('Done:', stats?.state);
   return stats ? stats.result : [];
 };
 

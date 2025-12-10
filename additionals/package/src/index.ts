@@ -1,6 +1,16 @@
 import { JCDPGraph, JCDPOptions, SequenceStep } from './types.js';
 import { WorkerMessage, WorkerResponse } from './worker.js';
-import { SolverState, jcdpPause, jcdpResume, jcdpCancel, jcdpGetState, jcdpInit } from './core.js';
+import {
+  SolverState,
+  jcdpPause,
+  jcdpResume,
+  jcdpCancel,
+  jcdpGetState,
+  setHEAP32,
+  setHEAPF64,
+  setStatePtr,
+  setHEAP8,
+} from './core.js';
 
 // Export types
 export type * from './types.js';
@@ -13,18 +23,24 @@ let nextMessageId = 1;
 const pendingRequests = new Map<
   number,
   {
-    resolve: () => void;
+    resolve: (value: number | PromiseLike<number>) => void;
     reject: (err: any) => void;
   }
 >();
 
 export class JCDPJob implements PromiseLike<void> {
   private _promise: Promise<void>;
-  private _handle: Promise<number>;
+  private _handlePromise: Promise<number>;
+  public handle: number | null = null;
 
-  constructor(promise: Promise<void>, handle: Promise<number>) {
-    this._promise = promise;
-    this._handle = handle;
+  constructor(handlePromise: Promise<number>) {
+    this._handlePromise = handlePromise;
+    this._promise = handlePromise.then(() => undefined);
+
+    // Capture the handle as soon as the worker provides it
+    this._handlePromise.then((h) => {
+      this.handle = h;
+    });
   }
 
   then<TResult1 = void, TResult2 = never>(
@@ -34,20 +50,26 @@ export class JCDPJob implements PromiseLike<void> {
     return this._promise.then(onfulfilled, onrejected);
   }
 
+  private async _getHandle(): Promise<number> {
+    const h = await this._handlePromise;
+    this.handle = h;
+    return h;
+  }
+
   async pause() {
-    await jcdpPause(await this._handle);
+    await jcdpPause(await this._getHandle());
   }
 
   async resume() {
-    await jcdpResume(await this._handle);
+    await jcdpResume(await this._getHandle());
   }
 
   async cancel() {
-    await jcdpCancel(await this._handle);
+    await jcdpCancel(await this._getHandle());
   }
 
   async getState(): Promise<SolverState | null> {
-    return jcdpGetState(await this._handle);
+    return jcdpGetState(await this._getHandle());
   }
 }
 
@@ -107,7 +129,25 @@ function handleWorkerResponse(data: WorkerResponse) {
     if (!success) {
       request.reject(new Error(error));
     } else {
-      request.resolve();
+      if (data.type === 'init') {
+        if (
+          data.HEAP8 &&
+          data.HEAP32 &&
+          data.HEAPF64 &&
+          data.statePtr !== undefined &&
+          data.handle !== undefined
+        ) {
+          setHEAP8(data.handle, data.HEAP8!);
+          setHEAP32(data.handle, data.HEAP32!);
+          setHEAPF64(data.handle, data.HEAPF64!);
+          setStatePtr(data.handle, data.statePtr!);
+          request.resolve(data.handle);
+        } else {
+          request.reject(new Error('Invalid init response from worker'));
+        }
+      } else {
+        // 'done' message; init already resolved the handle.
+      }
     }
     pendingRequests.delete(id);
   }
@@ -122,8 +162,7 @@ export function jcdp(
   partial_sequence: SequenceStep[] | string = [],
   options: JCDPOptions = {}
 ): JCDPJob {
-  const handle = jcdpInit();
-  const promise = new Promise<void>(async (resolve, reject) => {
+  const handlePromise = new Promise<number>(async (resolve, reject) => {
     try {
       const w = await getWorker();
       const id = nextMessageId++;
@@ -134,7 +173,6 @@ export function jcdp(
         graph,
         partial_sequence,
         options,
-        handle: await handle,
       };
 
       w.postMessage(message);
@@ -143,7 +181,7 @@ export function jcdp(
     }
   });
 
-  return new JCDPJob(promise, handle);
+  return new JCDPJob(handlePromise);
 }
 
 /**

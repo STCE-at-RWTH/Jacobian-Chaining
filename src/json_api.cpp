@@ -143,6 +143,10 @@ int32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
    if (std::string(optimizer) == "dp") {
       // Just return the DP solution
       current_state->optimal_sequence = dp_seq;
+      current_state->optimal_sequence_json =
+           jcdp::util::sequence_to_json(dp_seq);
+      current_state->result_ptr =
+           current_state->optimal_sequence_json.c_str();
       current_state->state = jcdp::StateControl::DONE;
    } else if (std::string(optimizer) == "bnb") {
       jcdp::optimizer::BranchAndBoundOptimizer bnb_solver;
