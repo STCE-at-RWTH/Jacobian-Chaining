@@ -154,9 +154,10 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
          Sequence task_sequence = sequence;
          JacobianChain task_chain = chain;
          std::vector<OpPair> task_eliminations = eliminations;
+         const double sspace = estimated_search_space(chain);
 
          #pragma omp atomic
-         m_control->estimated_search_space += estimated_search_space(chain);
+         m_control->estimated_search_space += sspace;
 
          // If this level 1 task was already finished in an earlier call, skip it
          m_task_id++;
@@ -166,11 +167,13 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
          }
 
          #pragma omp task default(none) firstprivate(task_id, task_sequence)   \
-                          firstprivate(task_chain, task_eliminations)
+                          firstprivate(task_chain, task_eliminations, sspace)
          {
             add_elimination(task_sequence, task_chain, task_eliminations, 0);
             #pragma omp taskwait
 
+            #pragma omp atomic
+            m_control->explored_search_space += sspace;
             m_control->finished_level_1_tasks[task_id] = true;
          }
       }
