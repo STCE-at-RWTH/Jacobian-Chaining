@@ -53,7 +53,8 @@ class Timer {
 
    inline auto elapsed_time() -> double {
       auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
-           timer_t::now() - m_start) - m_paused_duration;
+           timer_t::now() - m_start);
+      elapsed -= m_paused_duration;
       return elapsed.count();
    }
 

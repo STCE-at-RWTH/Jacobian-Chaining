@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <print>
 #include <vector>
+
 #include "jcdp/sequence.hpp"
 #include "jcdp/util/timer.hpp"
 
@@ -13,7 +14,13 @@ namespace jcdp {
 /**
  * @brief Enum to represent the state control for JCDP execution.
  */
-enum class StateControl : int32_t { RUN = 0, PAUSE = 1, CANCEL = 2, RESTART = 3, DONE = 4 };
+enum class StateControl : int32_t {
+   RUN = 0,
+   PAUSE = 1,
+   CANCEL = 2,
+   RESTART = 3,
+   DONE = 4
+};
 
 /**
  * @brief Struct to hold statistics and control flags for the B&B execution.
@@ -39,7 +46,7 @@ struct SolverState {
     * @return true if execution should continue, false if it should be
     * cancelled.
     */
-   inline auto barrier(util::Timer *timer) const -> bool {
+   inline auto barrier(util::Timer* timer) const -> bool {
       if (state == StateControl::PAUSE) {
          #pragma omp critical (timer_pause)
          timer->pause_timer();
@@ -65,8 +72,9 @@ struct SolverState {
       std::println("Leafs visited (= sequences scheduled): {}", visited_leafs);
       std::println("Updated makespan: {}", updated_makespans);
       std::println(
-           "Pruned branches: {}",
-           std::reduce(pruned_branches_per_length.cbegin(), pruned_branches_per_length.cend()));
+           "Pruned branches: {}", std::reduce(
+                                       pruned_branches_per_length.cbegin(),
+                                       pruned_branches_per_length.cend()));
       std::println("Pruned branches per sequence length:");
       std::print("[ ");
       for (const std::size_t pruned : pruned_branches_per_length) {

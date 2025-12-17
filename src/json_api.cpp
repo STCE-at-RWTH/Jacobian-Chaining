@@ -78,10 +78,10 @@ void* EMSCRIPTEN_KEEPALIVE jcdp_get_state_ptr(int32_t handle) {
 }
 
 int32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
-     int32_t handle,
-     const char* chain_json, const char* sequence_json, const char* optimizer,
-     const char* scheduler, uint32_t omp_threads, uint32_t available_threads,
-     uint32_t available_memory, uint32_t time_to_solve, bool matrix_free) {
+     int32_t handle, const char* chain_json, const char* sequence_json,
+     const char* optimizer, const char* scheduler, uint32_t omp_threads,
+     uint32_t available_threads, uint32_t available_memory,
+     uint32_t time_to_solve, bool matrix_free) {
 
 #if defined(_OPENMP)
    omp_set_num_threads(omp_threads);
@@ -143,10 +143,9 @@ int32_t EMSCRIPTEN_KEEPALIVE jcdp_run_from_json(
    if (std::string(optimizer) == "dp") {
       // Just return the DP solution
       current_state->optimal_sequence = dp_seq;
-      current_state->optimal_sequence_json =
-           jcdp::util::sequence_to_json(dp_seq);
-      current_state->result_ptr =
-           current_state->optimal_sequence_json.c_str();
+      current_state->optimal_sequence_json = jcdp::util::sequence_to_json(
+           dp_seq);
+      current_state->result_ptr = current_state->optimal_sequence_json.c_str();
       current_state->state = jcdp::StateControl::DONE;
    } else if (std::string(optimizer) == "bnb") {
       jcdp::optimizer::BranchAndBoundOptimizer bnb_solver;

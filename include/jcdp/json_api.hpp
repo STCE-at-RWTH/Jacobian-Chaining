@@ -17,7 +17,8 @@ int32_t jcdp_init();
 /**
  * @brief Runs the JCDP solver based on a JSON configuration string.
  *
- * @param handle            The handle of the state to use. If 0, a new one is created.
+ * @param handle            The handle of the state to use. If 0, a new one is
+ *                          created.
  * @param chain_json        The JSON string describing the Jacobian chain.
  * @param sequence_json     The JSON string describing a partial sequence.
  * @param optimizer         The optimizer to use ("dp" or "bnb").
@@ -29,10 +30,10 @@ int32_t jcdp_init();
  * @return 0 on success, or an error code (<0) on failure.
  */
 int32_t jcdp_run_from_json(
-     int32_t handle,
-     const char* chain_json, const char* sequence_json, const char* optimizer,
-     const char* scheduler, uint32_t omp_threads, uint32_t available_threads,
-     uint32_t available_memory, uint32_t time_to_solve, bool matrix_free);
+     int32_t handle, const char* chain_json, const char* sequence_json,
+     const char* optimizer, const char* scheduler, uint32_t omp_threads,
+     uint32_t available_threads, uint32_t available_memory,
+     uint32_t time_to_solve, bool matrix_free);
 
 /**
  * @brief Pauses the execution associated with the given handle.
@@ -61,7 +62,6 @@ void jcdp_cancel(int32_t handle);
  * @param handle The handle of the result to free.
  */
 void jcdp_free_result(int32_t handle);
-
 }
 
 #endif  // JCDP_JSON_API_H

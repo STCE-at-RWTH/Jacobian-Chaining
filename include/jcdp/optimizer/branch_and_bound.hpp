@@ -22,16 +22,16 @@
 #include <utility>
 #include <vector>
 
+#include "jcdp/control.hpp"
 #include "jcdp/jacobian.hpp"
 #include "jcdp/jacobian_chain.hpp"
 #include "jcdp/operation.hpp"
-#include "jcdp/control.hpp"
 #include "jcdp/optimizer/optimizer.hpp"
 #include "jcdp/scheduler/scheduler.hpp"
 #include "jcdp/sequence.hpp"
+#include "jcdp/util/json.hpp"
 #include "jcdp/util/math.hpp"
 #include "jcdp/util/timer.hpp"
-#include "jcdp/util/json.hpp"
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>> HEADER CONTENTS <<<<<<<<<<<<<<<<<<<<<<<<<<<< //
 
@@ -70,7 +70,8 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
 
       if (m_control->state != StateControl::RESTART) {
          m_control->pruned_branches_per_length.clear();
-         m_control->pruned_branches_per_length.resize(m_chain.longest_possible_sequence() + 1);
+         m_control->pruned_branches_per_length.resize(
+              m_chain.longest_possible_sequence() + 1);
          m_control->visited_leafs = 0;
          m_control->updated_makespans = 0;
          m_control->runtime_ms = 0.0;
@@ -159,7 +160,7 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
          #pragma omp atomic
          m_control->estimated_search_space += sspace;
 
-         // If this level 1 task was already finished in an earlier call, skip it
+         // Skip this level 1 task if it was already finished in an earlier call
          m_task_id++;
          std::size_t task_id = m_task_id;
          if (m_control->finished_level_1_tasks[task_id]) {
@@ -223,8 +224,8 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
                #pragma omp critical (new_best_sequence)
                if (m_makespan > new_makespan) {
                   m_control->optimal_sequence = final_sequence;
-                  m_control->optimal_sequence_json =
-                       util::sequence_to_json(final_sequence);
+                  m_control->optimal_sequence_json = util::sequence_to_json(
+                       final_sequence);
                   m_control->result_ptr =
                        m_control->optimal_sequence_json.c_str();
                   m_control->updated_makespans++;
@@ -238,7 +239,8 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
       // Check critical path as lower bound
       const std::size_t lower_bound = sequence.critical_path();
       if (lower_bound >= m_makespan || lower_bound > m_upper_bound) {
-         std::size_t& prune_counter = m_control->pruned_branches_per_length[sequence.length()];
+         std::size_t& prune_counter =
+              m_control->pruned_branches_per_length[sequence.length()];
 
          #pragma omp atomic
          prune_counter++;
@@ -268,8 +270,7 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
             push_possible_eliminations(chain, eliminations, op.j, op.i);
             sequence.push_back(op);
 
-            add_elimination(
-                 sequence, chain, eliminations, elim_idx + 1);
+            add_elimination(sequence, chain, eliminations, elim_idx + 1);
 
             sequence.pop_back();
             eliminations.pop_back();
@@ -387,7 +388,7 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
       eliminations.push_back(ops);
    }
 
-   inline auto estimated_search_space(const JacobianChain &chain) -> double {
+   inline auto estimated_search_space(const JacobianChain& chain) -> double {
       size_t i = 0;
       while (!chain.get_jacobian(i, i).is_accumulated && i < chain.length()) {
          ++i;
