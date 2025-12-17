@@ -13,6 +13,7 @@
 
 #include <cstddef>
 #include <limits>
+#include <optional>
 #include <print>
 
 #include "jcdp/sequence.hpp"
@@ -29,7 +30,7 @@ class Scheduler : public util::Timer {
 
    inline auto schedule(
         Sequence& sequence, const std::size_t threads,
-        const std::size_t upper_bound = std::numeric_limits<std::size_t>::max())
+        std::optional<const volatile std::size_t*> upper_bound = std::nullopt)
         -> std::size_t {
 
       start_timer();
@@ -43,8 +44,9 @@ class Scheduler : public util::Timer {
       return schedule_impl(sequence, usable_threads, upper_bound);
    }
 
-   virtual auto schedule_impl(Sequence&, const std::size_t, const std::size_t)
-        -> std::size_t = 0;
+   virtual auto schedule_impl(
+        Sequence&, const std::size_t,
+        std::optional<const volatile std::size_t*>) -> std::size_t = 0;
 };
 
 }  // namespace jcdp::scheduler

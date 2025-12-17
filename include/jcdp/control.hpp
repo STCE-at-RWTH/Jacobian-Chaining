@@ -1,9 +1,11 @@
 #ifndef JCDP_CONTROL_HPP_
 #define JCDP_CONTROL_HPP_
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <print>
+#include <thread>
 #include <vector>
 
 #include "jcdp/sequence.hpp"
@@ -53,6 +55,7 @@ struct SolverState {
 
          while (state == StateControl::PAUSE) {
             #pragma omp taskyield
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
          }
 
          #pragma omp critical (timer_pause)

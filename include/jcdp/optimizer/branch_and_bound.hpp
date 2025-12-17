@@ -211,7 +211,7 @@ class BranchAndBoundOptimizer : public Optimizer, public util::Timer {
                scheduler->set_timer(time_to_schedule);
 
                const std::size_t new_makespan = scheduler->schedule(
-                    final_sequence, m_usable_threads, m_makespan);
+                    final_sequence, m_usable_threads, &m_makespan);
 
                m_timer_expired |= !scheduler->finished_in_time();
 

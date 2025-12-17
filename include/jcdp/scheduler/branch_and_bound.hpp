@@ -28,12 +28,12 @@ class BranchAndBoundScheduler : public Scheduler {
  public:
    virtual auto schedule_impl(
         Sequence& sequence, const std::size_t usable_threads,
-        const std::size_t upper_bound) -> std::size_t override final {
+        std::optional<const volatile std::size_t*> upper_bound)
+        -> std::size_t override final {
       const std::size_t sequential_makespan = sequence.sequential_makespan();
 
       Sequence working_copy = sequence;
-      std::size_t best_makespan = upper_bound;
-
+      std::size_t best_makespan = std::numeric_limits<std::size_t>::max();
       std::vector<std::size_t> thread_loads(usable_threads, 0);
       std::size_t makespan = 0;
       std::size_t idling_time = 0;
@@ -45,14 +45,19 @@ class BranchAndBoundScheduler : public Scheduler {
 
       const std::size_t lower_bound = working_copy.critical_path();
 
-      if (lower_bound >= upper_bound) {
-         return lower_bound;
-      }
-
       auto schedule_op = [&](auto& schedule_next_op) -> bool {
          // Return if time's up
          if (!remaining_time()) {
             return true;
+         }
+
+         // Check upper bound (can change in other threads)
+         if (upper_bound.has_value()) {
+            const std::size_t ub = *(upper_bound.value());
+            best_makespan = std::min(best_makespan, ub);
+            if (best_makespan <= lower_bound) {
+               return true;
+            }
          }
 
          bool everything_scheduled = true;
