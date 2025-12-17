@@ -31,11 +31,22 @@ const pendingRequests = new Map<
 export class JCDPJob implements PromiseLike<void> {
   private _promise: Promise<void>;
   private _handlePromise: Promise<number>;
+  private _graph: JCDPGraph | string;
+  private _partialSequence: JCDPSequenceStep[] | string;
+  private _options: JCDPOptions;
   public handle: number | null = null;
 
-  constructor(handlePromise: Promise<number>) {
+  constructor(
+    handlePromise: Promise<number>,
+    graph: JCDPGraph | string,
+    partialSequence: JCDPSequenceStep[] | string,
+    options: JCDPOptions
+  ) {
     this._handlePromise = handlePromise;
     this._promise = handlePromise.then(() => undefined);
+    this._graph = graph;
+    this._partialSequence = partialSequence;
+    this._options = options;
 
     // Capture the handle as soon as the worker provides it
     this._handlePromise.then((h) => {
@@ -68,8 +79,11 @@ export class JCDPJob implements PromiseLike<void> {
     await jcdpCancel(await this._getHandle());
   }
 
-  async restart() {
+  async restart(): Promise<JCDPJob> {
     await jcdpRestart(await this._getHandle());
+
+    // Re-run JCDP to obtain a fresh job object with an unresolved promise
+    return jcdp(this._graph, this._partialSequence, this._options);
   }
 
   async getState(): Promise<JCDPSolverState | null> {
@@ -185,7 +199,7 @@ export function jcdp(
     }
   });
 
-  return new JCDPJob(handlePromise);
+  return new JCDPJob(handlePromise, graph, partial_sequence, options);
 }
 
 /**
