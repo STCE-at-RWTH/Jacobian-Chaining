@@ -5,7 +5,7 @@ import { JCDPSequenceStep, JCDPOptions } from '../src/types.js';
 const jcdpWorkerWrapper: JCDPFunction = async (
   graph: string,
   seq: JCDPSequenceStep[],
-  options: JCDPOptions
+  options: JCDPOptions,
 ) => {
   const job = jcdp(graph, seq, options);
   await new Promise((resolve) => setTimeout(resolve, 100).unref());

@@ -5,7 +5,7 @@ import { JCDPSequenceStep, JCDPOptions } from '../src/types.js';
 const jcdpSyncWrapper: JCDPFunction = async (
   graph: string,
   seq: JCDPSequenceStep[],
-  options: JCDPOptions
+  options: JCDPOptions,
 ) => {
   const handle = await jcdpSync(graph, seq, options);
   const state = await jcdpGetState(handle);

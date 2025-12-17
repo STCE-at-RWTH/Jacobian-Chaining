@@ -57,13 +57,13 @@ export function parseConfig(configPath: string): TestConfig {
 export type JCDPFunction = (
   graph: string,
   seq: JCDPSequenceStep[],
-  options: JCDPOptions
+  options: JCDPOptions,
 ) => Promise<JCDPSequenceStep[]>;
 
 export async function runTests(
   testName: string,
   jcdpFunction: JCDPFunction,
-  cleanupFunction: (() => void) | null = null
+  cleanupFunction: (() => void) | null = null,
 ) {
   try {
     console.log(`Running ${testName} with data files...`);
@@ -88,7 +88,7 @@ export async function runTests(
         for (const testCase of testCases) {
           const { optimizer, scheduler, expectedFile } = testCase;
           console.log(
-            `\nTesting Optimizer: ${optimizer}, Scheduler: ${scheduler}, OpenMP Threads: ${OpenMPThreads}`
+            `\nTesting Optimizer: ${optimizer}, Scheduler: ${scheduler}, OpenMP Threads: ${OpenMPThreads}`,
           );
 
           const expectedPath = path.join(currentDataDir, expectedFile);

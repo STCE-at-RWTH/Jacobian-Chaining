@@ -184,7 +184,7 @@ export async function jcdpSync(
   graph: JCDPGraph | string,
   partial_sequence: JCDPSequenceStep[] | string = [],
   options: JCDPOptions = {},
-  handle: number = 0
+  handle: number = 0,
 ): Promise<number> {
   const mod = await getJCDPModule();
 
@@ -234,7 +234,7 @@ export async function jcdpSync(
         available_memory,
         time_to_solve,
         matrix_free,
-      ]
+      ],
     );
     const endTime = performance.now();
     console.log(`JCDP execution took ${(endTime - startTime).toFixed(2)} ms`);

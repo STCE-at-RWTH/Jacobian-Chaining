@@ -40,7 +40,7 @@ export class JCDPJob implements PromiseLike<void> {
     handlePromise: Promise<number>,
     graph: JCDPGraph | string,
     partialSequence: JCDPSequenceStep[] | string,
-    options: JCDPOptions
+    options: JCDPOptions,
   ) {
     this._handlePromise = handlePromise;
     this._promise = handlePromise.then(() => undefined);
@@ -56,7 +56,7 @@ export class JCDPJob implements PromiseLike<void> {
 
   then<TResult1 = void, TResult2 = never>(
     onfulfilled?: ((value: void) => TResult1 | PromiseLike<TResult1>) | null,
-    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null
+    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
     return this._promise.then(onfulfilled, onrejected);
   }
@@ -178,7 +178,7 @@ function handleWorkerResponse(data: WorkerResponse) {
 export function jcdp(
   graph: JCDPGraph | string,
   partial_sequence: JCDPSequenceStep[] | string = [],
-  options: JCDPOptions = {}
+  options: JCDPOptions = {},
 ): JCDPJob {
   const handlePromise = new Promise<number>(async (resolve, reject) => {
     try {
