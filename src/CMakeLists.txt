@@ -109,8 +109,15 @@ if(EMSCRIPTEN)
       add_custom_target(publish_npm_package
          DEPENDS build_npm_package ${jcdp_lib_name}_wasm_prod
          WORKING_DIRECTORY ${NPM_PACKAGE_DIR}
-         COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE_DIR:${jcdp_lib_name}_wasm_prod>/${jcdp_lib_name}_prod.js" "${NPM_PACKAGE_DIR}/lib/${jcdp_lib_name}.js"
-         COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE_DIR:${jcdp_lib_name}_wasm_prod>/${jcdp_lib_name}_prod.wasm" "${NPM_PACKAGE_DIR}/lib/${jcdp_lib_name}.wasm"
+         COMMAND ${CMAKE_COMMAND} -E copy
+            "$<TARGET_FILE_DIR:${jcdp_lib_name}_wasm_prod>/${jcdp_lib_name}_prod.js"
+            "${NPM_PACKAGE_DIR}/lib/${jcdp_lib_name}.js"
+         COMMAND ${CMAKE_COMMAND} -E copy
+            "$<TARGET_FILE_DIR:${jcdp_lib_name}_wasm_prod>/${jcdp_lib_name}_prod.wasm"
+            "${NPM_PACKAGE_DIR}/lib/${jcdp_lib_name}.wasm"
+         COMMAND sed -i "s/${jcdp_lib_name}_prod.wasm/${jcdp_lib_name}.wasm/g" "${NPM_PACKAGE_DIR}/lib/${jcdp_lib_name}.js"
+         COMMAND sed -i "s/${jcdp_lib_name}_prod.js/${jcdp_lib_name}.js/g" "${NPM_PACKAGE_DIR}/lib/${jcdp_lib_name}.js"
+         COMMAND npm run format
          COMMAND ${NPM} publish
          COMMENT "Publishing NPM package"
       )
