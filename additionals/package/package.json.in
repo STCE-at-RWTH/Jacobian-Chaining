@@ -17,7 +17,7 @@
     "url": "git://github.com/STCE-at-RWTH/Jacobian-Chaining.git"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "test": "npm run test:sync && npm run test:worker",
     "test:sync": "node --loader ts-node/esm test/test.ts",
     "test:worker": "node --loader ts-node/esm test/test_worker.ts",

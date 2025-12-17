@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { JCDPGraph, SequenceStep, JCDPOptions } from '../src/types.js';
+import { JCDPGraph, JCDPSequenceStep, JCDPOptions } from '../src/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,9 +56,9 @@ export function parseConfig(configPath: string): TestConfig {
 
 export type JCDPFunction = (
   graph: string,
-  seq: SequenceStep[],
+  seq: JCDPSequenceStep[],
   options: JCDPOptions
-) => Promise<SequenceStep[]>;
+) => Promise<JCDPSequenceStep[]>;
 
 export async function runTests(
   testName: string,

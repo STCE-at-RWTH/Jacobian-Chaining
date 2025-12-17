@@ -1,4 +1,4 @@
-import { JCDPGraph, JCDPOptions, SequenceStep } from './types.js';
+import { JCDPGraph, JCDPOptions, JCDPSequenceStep, JCDPSolverState } from './types.js';
 import createJCDPModule from '../lib/jcdp.js';
 
 // Resolve assets using import.meta.url. Bundlers (Vite/Webpack) will see these,
@@ -111,18 +111,16 @@ export async function jcdpCancel(handle: number): Promise<void> {
   }
 }
 
-export interface SolverState {
-  visited_leafs: number;
-  updated_makespans: number;
-  pruned_branches: number;
-  runtime_ms: number;
-  estimated_search_space: number;
-  explored_search_space: number;
-  state: number;
-  result: SequenceStep[];
+export async function jcdpRestart(handle: number): Promise<void> {
+  const HEAP32 = HEAP32Map.get(handle);
+  const ptr = statePtrMap.get(handle);
+  if (HEAP32 && ptr) {
+    // StateControl::RESTART = 3.
+    writeStateControl(HEAP32, ptr, 3);
+  }
 }
 
-export async function jcdpGetState(handle: number): Promise<SolverState | null> {
+export async function jcdpGetState(handle: number): Promise<JCDPSolverState | null> {
   // Fast path: read directly from SolverState memory (non-blocking)
   let ptr = statePtrMap.get(handle);
   if (!ptr) {
@@ -160,11 +158,11 @@ export async function jcdpGetState(handle: number): Promise<SolverState | null> 
   // Pointer to result string (Int8)
   const resultPtr = HEAP32[(ptr + 40) >> 2];
 
-  let result: SequenceStep[] = [];
+  let result: JCDPSequenceStep[] = [];
   if (resultPtr !== 0 && mod.UTF8ArrayToString) {
     const resultJson = mod.UTF8ArrayToString(HEAP8, resultPtr);
     try {
-      result = JSON.parse(resultJson) as SequenceStep[];
+      result = JSON.parse(resultJson) as JCDPSequenceStep[];
     } catch (e) {
       console.error('Failed to parse result JSON:', e);
     }
@@ -184,7 +182,7 @@ export async function jcdpGetState(handle: number): Promise<SolverState | null> 
 
 export async function jcdpSync(
   graph: JCDPGraph | string,
-  partial_sequence: SequenceStep[] | string = [],
+  partial_sequence: JCDPSequenceStep[] | string = [],
   options: JCDPOptions = {},
   handle: number = 0
 ): Promise<number> {

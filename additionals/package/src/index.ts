@@ -1,10 +1,10 @@
-import { JCDPGraph, JCDPOptions, SequenceStep } from './types.js';
+import { JCDPGraph, JCDPOptions, JCDPSequenceStep, JCDPSolverState } from './types.js';
 import { WorkerMessage, WorkerResponse } from './worker.js';
 import {
-  SolverState,
   jcdpPause,
   jcdpResume,
   jcdpCancel,
+  jcdpRestart,
   jcdpGetState,
   setHEAP32,
   setHEAPF64,
@@ -68,7 +68,11 @@ export class JCDPJob implements PromiseLike<void> {
     await jcdpCancel(await this._getHandle());
   }
 
-  async getState(): Promise<SolverState | null> {
+  async restart() {
+    await jcdpRestart(await this._getHandle());
+  }
+
+  async getState(): Promise<JCDPSolverState | null> {
     return jcdpGetState(await this._getHandle());
   }
 }
@@ -159,7 +163,7 @@ function handleWorkerResponse(data: WorkerResponse) {
  */
 export function jcdp(
   graph: JCDPGraph | string,
-  partial_sequence: SequenceStep[] | string = [],
+  partial_sequence: JCDPSequenceStep[] | string = [],
   options: JCDPOptions = {}
 ): JCDPJob {
   const handlePromise = new Promise<number>(async (resolve, reject) => {

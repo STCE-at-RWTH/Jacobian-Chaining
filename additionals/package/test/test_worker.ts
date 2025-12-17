@@ -1,10 +1,10 @@
 import { jcdp, terminateJCDPWorker, jcdpGetState } from '../src/index.js';
 import { runTests, JCDPFunction } from './common.js';
-import { SequenceStep, JCDPOptions } from '../src/types.js';
+import { JCDPSequenceStep, JCDPOptions } from '../src/types.js';
 
 const jcdpWorkerWrapper: JCDPFunction = async (
   graph: string,
-  seq: SequenceStep[],
+  seq: JCDPSequenceStep[],
   options: JCDPOptions
 ) => {
   const job = jcdp(graph, seq, options);

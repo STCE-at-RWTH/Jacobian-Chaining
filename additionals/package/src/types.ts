@@ -20,16 +20,16 @@ export interface JCDPGraph {
   edges: JCDPEdge[];
 }
 
-export type EliminationType =
+type EliminationType =
   | 'node'
   | 'edge-forward'
   | 'edge-backward'
   | 'face'
   | 'accumulate-edge'
   | 'accumulate-dual-node';
-export type GFEMethod = 'acc-tan' | 'acc-adj' | 'elim-tan' | 'elim-adj' | 'elim-mul';
+type GFEMethod = 'acc-tan' | 'acc-adj' | 'elim-tan' | 'elim-adj' | 'elim-mul';
 
-export type SequenceStep = {
+export type JCDPSequenceStep = {
   kind: EliminationType;
   method?: GFEMethod;
   fillIn: number;
@@ -49,11 +49,13 @@ export interface JCDPOptions {
   matrixFree?: boolean;
 }
 
-export interface JCDPStats {
-  leafsVisited: number;
-  prunedBranches: number;
-  runtimeMs: number;
-  estimatedSearchSpace: number;
-  state: number; // 0: Running, 1: Paused, 2: Cancelled, 3: Done
-  result?: SequenceStep[];
+export interface JCDPSolverState {
+  visited_leafs: number;
+  updated_makespans: number;
+  pruned_branches: number;
+  runtime_ms: number;
+  estimated_search_space: number;
+  explored_search_space: number;
+  state: number;
+  result: JCDPSequenceStep[];
 }

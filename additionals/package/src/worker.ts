@@ -1,11 +1,11 @@
 import { jcdpSync, jcdpInit, jcdpGetStatePtr, getJCDPModule } from './core.js';
-import { JCDPGraph, JCDPOptions, SequenceStep } from './types.js';
+import { JCDPGraph, JCDPOptions, JCDPSequenceStep } from './types.js';
 
 // Define the message format
 export type WorkerMessage = {
   id: number;
   graph: JCDPGraph | string;
-  partial_sequence: SequenceStep[] | string;
+  partial_sequence: JCDPSequenceStep[] | string;
   options: JCDPOptions;
 };
 
